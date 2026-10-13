@@ -309,6 +309,24 @@ int main() {
 
     std::cout << "PASS: Subtract register B from A" << std::endl;
 
+    // Test 20: Compare equal registers
+    CPU cmp_cpu;
+    cmp_cpu.register_a = 10;
+    cmp_cpu.register_b = 10;
+    cmp_cpu.write_memory(0, CPU::OP_CMP);
+    cmp_cpu.write_memory(1, CPU::OP_HALT);
+    cmp_cpu.run();
+
+    if (!cmp_cpu.zero_flag ||
+        cmp_cpu.register_a != 10 ||
+        cmp_cpu.register_b != 10) {
+        std::cerr << "FAIL: Compare equal registers" << std::endl;
+        return 1;
+    }
+
+    std::cout << "PASS: Compare equal registers" << std::endl;
+
+
     std::cout << "All tests passed." << std::endl;
     return 0;
 }

@@ -24,6 +24,7 @@ public:
     static constexpr uint8_t OP_MOV_B_A = 11;
     static constexpr uint8_t OP_ADD_B = 12;
     static constexpr uint8_t OP_SUB_B = 13;
+    static constexpr uint8_t OP_CMP = 14;
     static constexpr uint8_t OP_HALT = 255;
 
     uint8_t register_a = 0;
@@ -33,6 +34,7 @@ public:
     std::array<uint8_t, MEMORY_SIZE> memory{};
 
     bool halted = false;
+    bool zero_flag = false;
 
     void add(uint8_t value) {
         register_a = static_cast<uint8_t>(
@@ -160,6 +162,10 @@ public:
                 break;
             }
 
+            case OP_CMP: {
+                zero_flag = (register_a == register_b);
+                break;
+            }
 
             case OP_HALT:
                 halted = true;
@@ -179,6 +185,7 @@ public:
         register_b = 0;
         program_counter = 0;
         halted = false;
+        zero_flag = false;
         memory.fill(0);
     }
 
