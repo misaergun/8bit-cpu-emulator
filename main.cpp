@@ -62,6 +62,22 @@ void print_cpu_state(const CPU& cpu) {
     std::cout << "------------------------\n";
 }
 
+void inspect_memory(const CPU& cpu, uint16_t address) {
+    uint8_t value = cpu.read_memory(address);
+
+    std::cout << "Memory address: " << address << '\n';
+
+    std::cout << "Value (decimal): "
+              << static_cast<int>(value) << '\n';
+
+    std::cout << "Value (hex): 0x"
+              << std::hex
+              << static_cast<int>(value)
+              << std::dec
+              << '\n';
+}
+
+
 int main() {
     CPU cpu;
 
@@ -129,6 +145,27 @@ int main() {
         std::cerr << "Invalid mode. Choose 's' or 'r'.\n";
         return 1;
     }
+
+
+    char inspect_choice;
+
+    std::cout << "\nInspect memory? (y/n): ";
+    std::cin >> inspect_choice;
+
+    if (inspect_choice == 'y' || inspect_choice == 'Y') {
+        uint16_t address;
+
+        std::cout << "Enter memory address (0-255): ";
+        std::cin >> address;
+
+        if (address >= CPU::MEMORY_SIZE) {
+            std::cerr << "Invalid memory address.\n";
+            return 1;
+        }
+
+        inspect_memory(cpu, address);
+    }
+
 
     std::cout << "Final comparison result: "
               << static_cast<int>(cpu.register_a)
