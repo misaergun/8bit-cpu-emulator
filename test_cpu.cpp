@@ -102,6 +102,28 @@ int main() {
     }
     std::cout << "PASS: JZ when register A is nonzero" << std::endl;
 
+    
+    // Test 8: Loop until register A reaches zero
+    CPU loop_cpu;
+    loop_cpu.write_memory(0, CPU::OP_LOAD);
+    loop_cpu.write_memory(1, 3);
+    loop_cpu.write_memory(2, CPU::OP_SUB);
+    loop_cpu.write_memory(3, 1);
+    loop_cpu.write_memory(4, CPU::OP_JZ);
+    loop_cpu.write_memory(5, 8);
+    loop_cpu.write_memory(6, CPU::OP_JMP);
+    loop_cpu.write_memory(7, 2);
+    loop_cpu.write_memory(8, CPU::OP_HALT);
+
+    loop_cpu.run();
+
+    if (loop_cpu.register_a != 0 || !loop_cpu.halted) {
+        std::cerr << "FAIL: Loop until zero" << std::endl;
+        return 1;
+    }
+
+    std::cout << "PASS: Loop until zero" << std::endl;
+
     std::cout << "All tests passed." << std::endl;
     return 0;
 }
