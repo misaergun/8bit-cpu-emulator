@@ -146,6 +146,27 @@ int main() {
         std::cout << "PASS: Infinite loop detection" << std::endl;
     }
 
+    // Test 10: Reset CPU state
+    CPU reset_cpu;
+    reset_cpu.write_memory(0, CPU::OP_LOAD);
+    reset_cpu.write_memory(1, 42);
+    reset_cpu.write_memory(2, CPU::OP_HALT);
+    reset_cpu.run();
+
+    reset_cpu.reset();
+
+    if (reset_cpu.register_a != 0 ||
+        reset_cpu.program_counter != 0 ||
+        reset_cpu.halted ||
+        reset_cpu.read_memory(0) != 0 ||
+        reset_cpu.read_memory(1) != 0) {
+        std::cerr << "FAIL: Reset CPU state" << std::endl;
+        return 1;
+    }
+
+    std::cout << "PASS: Reset CPU state" << std::endl;
+
+
 
     std::cout << "All tests passed." << std::endl;
     return 0;

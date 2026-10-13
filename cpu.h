@@ -117,6 +117,15 @@ public:
         }
     }
 
+
+    void reset() {
+        register_a = 0;
+        program_counter = 0;
+        halted = false;
+        memory.fill(0);
+    }
+
+
     
 void run() {
     constexpr uint32_t MAX_STEPS = 1000;
