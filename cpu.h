@@ -5,6 +5,7 @@
 #include <array>
 #include <cstdint>
 #include <stdexcept>
+#include <string>
 
 class CPU {
 public:
@@ -12,6 +13,7 @@ public:
 
     static constexpr uint8_t OP_LOAD = 1;
     static constexpr uint8_t OP_ADD = 2;
+    static constexpr uint8_t OP_SUB = 3;
     static constexpr uint8_t OP_HALT = 255;
 
     uint8_t register_a = 0;
@@ -24,6 +26,12 @@ public:
     void add(uint8_t value) {
         register_a = static_cast<uint8_t>(
             register_a + value
+        );
+    }
+
+    void subtract(uint8_t value) {
+        register_a = static_cast<uint8_t>(
+            register_a - value
         );
     }
 
@@ -70,6 +78,12 @@ public:
             case OP_ADD: {
                 uint8_t value = fetch();
                 add(value);
+                break;
+            }
+
+            case OP_SUB: {
+                uint8_t value = fetch();
+                subtract(value);
                 break;
             }
 

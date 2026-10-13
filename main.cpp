@@ -5,11 +5,11 @@
 int main() {
     CPU cpu;
 
-    // Program: A = 5, A = A + 3, HALT
+    // Program: A = 8, A = A - 3, HALT
     cpu.write_memory(0, CPU::OP_LOAD);
-    cpu.write_memory(1, 5);
+    cpu.write_memory(1, 8);
 
-    cpu.write_memory(2, CPU::OP_ADD);
+    cpu.write_memory(2, CPU::OP_SUB);
     cpu.write_memory(3, 3);
 
     cpu.write_memory(4, CPU::OP_HALT);
@@ -21,7 +21,7 @@ int main() {
               << std::endl;
 
     std::cout << "Program Counter: "
-              << static_cast<int>(cpu.program_counter)
+              << cpu.program_counter
               << std::endl;
 
     std::cout << "CPU halted: "
