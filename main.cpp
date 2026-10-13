@@ -78,6 +78,7 @@ void inspect_memory(const CPU& cpu, uint16_t address) {
               << '\n';
 }
 
+
 void dump_memory(const CPU& cpu, uint16_t start, uint16_t count) {
     if (start >= CPU::MEMORY_SIZE ||
         count == 0 ||
@@ -99,19 +100,18 @@ void dump_memory(const CPU& cpu, uint16_t start, uint16_t count) {
                   << std::setw(2) << std::setfill('0')
                   << address
                   << "      "
-                  << std::setfill(' ')
-                  << std::setw(3)
+                  << std::setw(2)
                   << static_cast<int>(value)
                   << "    "
                   << std::dec
+                  << std::setfill(' ')
                   << std::setw(3)
                   << static_cast<int>(value)
                   << '\n';
     }
 
-    std::cout << std::dec;
+    std::cout << std::dec << std::setfill(' ');
 }
-
 
 
 int main() {
