@@ -293,8 +293,21 @@ int main() {
 
     std::cout << "PASS: Add register B to A" << std::endl;
 
+    // Test 19: Subtract register B from register A
+    CPU sub_b_cpu;
+    sub_b_cpu.register_a = 10;
+    sub_b_cpu.register_b = 3;
+    sub_b_cpu.write_memory(0, CPU::OP_SUB_B);
+    sub_b_cpu.write_memory(1, CPU::OP_HALT);
+    sub_b_cpu.run();
 
+    if (sub_b_cpu.register_a != 7 ||
+        sub_b_cpu.register_b != 3) {
+        std::cerr << "FAIL: Subtract register B from A" << std::endl;
+        return 1;
+    }
 
+    std::cout << "PASS: Subtract register B from A" << std::endl;
 
     std::cout << "All tests passed." << std::endl;
     return 0;

@@ -23,6 +23,7 @@ public:
     static constexpr uint8_t OP_MOV_A_B = 10;
     static constexpr uint8_t OP_MOV_B_A = 11;
     static constexpr uint8_t OP_ADD_B = 12;
+    static constexpr uint8_t OP_SUB_B = 13;
     static constexpr uint8_t OP_HALT = 255;
 
     uint8_t register_a = 0;
@@ -114,6 +115,12 @@ public:
                 subtract(value);
                 break;
             }
+
+            case OP_SUB_B: {
+                subtract(register_b);
+                break;
+            }
+
 
             case OP_JMP: {
                 uint8_t address = fetch();
