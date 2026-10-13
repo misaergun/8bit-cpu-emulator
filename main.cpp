@@ -78,7 +78,6 @@ void inspect_memory(const CPU& cpu, uint16_t address) {
               << '\n';
 }
 
-
 void dump_memory(const CPU& cpu, uint16_t start, uint16_t count) {
     if (start >= CPU::MEMORY_SIZE ||
         count == 0 ||
@@ -113,6 +112,112 @@ void dump_memory(const CPU& cpu, uint16_t start, uint16_t count) {
     std::cout << std::dec << std::setfill(' ');
 }
 
+bool execute_program(CPU& cpu) {
+    char mode;
+
+    std::cout << "\nChoose execution mode:\n";
+    std::cout << "s - Step mode\n";
+    std::cout << "r - Run mode\n";
+    std::cout << "Your choice: ";
+    std::cin >> mode;
+
+    if (mode == 's' || mode == 'S') {
+        while (!cpu.halted) {
+            uint16_t instruction_address = cpu.program_counter;
+            uint8_t instruction = cpu.read_memory(instruction_address);
+
+            std::cout << "\nExecuting: "
+                      << instruction_name(instruction)
+                      << " (address " << instruction_address << ")\n";
+
+            cpu.step();
+            print_cpu_state(cpu);
+
+            if (!cpu.halted) {
+                std::cout << "Press Enter for next instruction...";
+
+                std::cin.ignore(
+                    std::numeric_limits<std::streamsize>::max(), '\n'
+                );
+                std::cin.get();
+            }
+        }
+    } else if (mode == 'r' || mode == 'R') {
+        while (!cpu.halted) {
+            uint16_t instruction_address = cpu.program_counter;
+            uint8_t instruction = cpu.read_memory(instruction_address);
+
+            std::cout << "Executing: "
+                      << instruction_name(instruction)
+                      << " (address " << instruction_address << ")\n";
+
+            cpu.step();
+            print_cpu_state(cpu);
+        }
+    } else {
+        std::cerr << "Invalid mode. Choose 's' or 'r'.\n";
+        return false;
+    }
+
+    return true;
+}
+
+void inspect_memory_menu(const CPU& cpu) {
+    char inspect_choice;
+
+    std::cout << "\nInspect memory? (y/n): ";
+    std::cin >> inspect_choice;
+
+    if (inspect_choice != 'y' && inspect_choice != 'Y') {
+        return;
+    }
+
+    uint16_t address;
+
+    std::cout << "Enter memory address (0-255): ";
+    if (!(std::cin >> address) || address >= CPU::MEMORY_SIZE) {
+        std::cerr << "Invalid memory address.\n";
+        std::cin.clear();
+        std::cin.ignore(
+            std::numeric_limits<std::streamsize>::max(), '\n'
+        );
+        return;
+    }
+
+    inspect_memory(cpu, address);
+
+    char dump_choice;
+
+    std::cout << "\nDump a memory range? (y/n): ";
+    std::cin >> dump_choice;
+
+    if (dump_choice == 'y' || dump_choice == 'Y') {
+        uint16_t start;
+        uint16_t count;
+
+        std::cout << "Start address (0-255): ";
+        if (!(std::cin >> start) || start >= CPU::MEMORY_SIZE) {
+            std::cerr << "Invalid start address.\n";
+            std::cin.clear();
+            std::cin.ignore(
+                std::numeric_limits<std::streamsize>::max(), '\n'
+            );
+            return;
+        }
+
+        std::cout << "Number of bytes: ";
+        if (!(std::cin >> count)) {
+            std::cerr << "Invalid byte count.\n";
+            std::cin.clear();
+            std::cin.ignore(
+                std::numeric_limits<std::streamsize>::max(), '\n'
+            );
+            return;
+        }
+
+        dump_memory(cpu, start, count);
+    }
+}
 
 int main() {
     CPU cpu;
@@ -135,96 +240,36 @@ int main() {
         CPU::OP_HALT
     };
 
-    
     load_program(cpu, program);
 
-    char mode;
-    std::cout << "Choose execution mode:\n";
-    std::cout << "s - Step mode\n";
-    std::cout << "r - Run mode\n";
-    std::cout << "Your choice: ";
-    std::cin >> mode;
+    while (true) {
+        bool executed = execute_program(cpu);
 
-    if (mode == 's' || mode == 'S') {
-        while (!cpu.halted) {
-            uint16_t instruction_address = cpu.program_counter;
-            uint8_t instruction = cpu.read_memory(instruction_address);
-
-            std::cout << "\nExecuting: "
-                      << instruction_name(instruction)
-                      << " (address " << instruction_address << ")\n";
-
-            cpu.step();
-            print_cpu_state(cpu);
-
-            if (!cpu.halted) {
-                std::cout << "Press Enter for next instruction...";
-                std::cin.ignore(
-                    std::numeric_limits<std::streamsize>::max(), '\n'
-                );
-                std::cin.get();
-            }
-        }
-    } else if (mode == 'r' || mode == 'R') {
-        while (!cpu.halted) {
-            uint16_t instruction_address = cpu.program_counter;
-            uint8_t instruction = cpu.read_memory(instruction_address);
-
-            std::cout << "Executing: "
-                      << instruction_name(instruction)
-                      << " (address " << instruction_address << ")\n";
-
-            cpu.step();
-            print_cpu_state(cpu);
-        }
-    } else {
-        std::cerr << "Invalid mode. Choose 's' or 'r'.\n";
-        return 1;
-    }
-
-
-    
-    char inspect_choice;
-
-    std::cout << "\nInspect memory? (y/n): ";
-    std::cin >> inspect_choice;
-
-    if (inspect_choice == 'y' || inspect_choice == 'Y') {
-        uint16_t address;
-
-        std::cout << "Enter memory address (0-255): ";
-        std::cin >> address;
-
-        if (address >= CPU::MEMORY_SIZE) {
-            std::cerr << "Invalid memory address.\n";
+        if (!executed) {
             return 1;
         }
 
-        inspect_memory(cpu, address);
+        inspect_memory_menu(cpu);
 
-        char dump_choice;
-        std::cout << "\nDump a memory range? (y/n): ";
-        std::cin >> dump_choice;
+        std::cout << "\nFinal comparison result: "
+                  << static_cast<int>(cpu.register_a)
+                  << '\n';
 
-        if (dump_choice == 'y' || dump_choice == 'Y') {
-            uint16_t start;
-            uint16_t count;
+        char choice;
 
-            std::cout << "Start address (0-255): ";
-            std::cin >> start;
+        std::cout << "\nReset CPU and run again? (y/n): ";
+        std::cin >> choice;
 
-            std::cout << "Number of bytes: ";
-            std::cin >> count;
-
-            dump_memory(cpu, start, count);
+        if (choice != 'y' && choice != 'Y') {
+            std::cout << "Exiting CPU emulator.\n";
+            break;
         }
-    }
 
- 
-    std::cout << "Final comparison result: "
-              << static_cast<int>(cpu.register_a)
-              << '\n';
+        cpu.reset();
+        load_program(cpu, program);
+
+        std::cout << "\nCPU has been reset and the program reloaded.\n";
+    }
 
     return 0;
 }
-
