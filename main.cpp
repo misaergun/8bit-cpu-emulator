@@ -1,48 +1,41 @@
 
 #include <iostream>
+#include <vector>
 #include "cpu.h"
+
+void load_program(CPU& cpu, const std::vector<uint8_t>& program) {
+    for (size_t i = 0; i < program.size(); ++i) {
+        cpu.write_memory(
+            static_cast<uint16_t>(i),
+            program[i]
+        );
+    }
+}
 
 int main() {
     CPU cpu;
 
-    // Load the first number into register A
-    cpu.write_memory(0, CPU::OP_LOAD);
-    cpu.write_memory(1, 8);
+    // Compare A = 8 and B = 5.
+    // Result: 1 = A < B, 2 = A > B, 3 = A == B.
+    const std::vector<uint8_t> program = {
+        CPU::OP_LOAD, 8,       // Address 0-1
+        CPU::OP_LOAD_B, 5,     // Address 2-3
+        CPU::OP_CMP,           // Address 4
+        CPU::OP_JL, 12,        // Address 5-6
+        CPU::OP_JG, 16,        // Address 7-8
+        CPU::OP_JE, 20,        // Address 9-10
+        CPU::OP_HALT,          // Address 11 (fallback)
+        CPU::OP_LOAD, 1,       // Address 12-13: A < B
+        CPU::OP_HALT,          // Address 14
+        0,                     // Address 15: unused
+        CPU::OP_LOAD, 2,       // Address 16-17: A > B
+        CPU::OP_HALT,          // Address 18
+        0,                     // Address 19: unused
+        CPU::OP_LOAD, 3,       // Address 20-21: A == B
+        CPU::OP_HALT           // Address 22
+    };
 
-    // Load the second number into register B
-    cpu.write_memory(2, CPU::OP_LOAD_B);
-    cpu.write_memory(3, 5);
-
-    // Compare A and B
-    cpu.write_memory(4, CPU::OP_CMP);
-
-    // If A < B, jump to address 12
-    cpu.write_memory(5, CPU::OP_JL);
-    cpu.write_memory(6, 12);
-
-    // If A > B, jump to address 16
-    cpu.write_memory(7, CPU::OP_JG);
-    cpu.write_memory(8, 16);
-
-    // If neither condition is true, A and B are equal
-    cpu.write_memory(9, CPU::OP_JE);
-    cpu.write_memory(10, 20);
-
-    // A < B: store result 1 in register A
-    cpu.write_memory(12, CPU::OP_LOAD);
-    cpu.write_memory(13, 1);
-    cpu.write_memory(14, CPU::OP_HALT);
-
-    // A > B: store result 2 in register A
-    cpu.write_memory(16, CPU::OP_LOAD);
-    cpu.write_memory(17, 2);
-    cpu.write_memory(18, CPU::OP_HALT);
-
-    // A == B: store result 3 in register A
-    cpu.write_memory(20, CPU::OP_LOAD);
-    cpu.write_memory(21, 3);
-    cpu.write_memory(22, CPU::OP_HALT);
-
+    load_program(cpu, program);
     cpu.run();
 
     std::cout << "Comparison result: "
