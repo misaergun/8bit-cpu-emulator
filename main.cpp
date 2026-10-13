@@ -1,9 +1,27 @@
 
 #include <iostream>
+#include "cpu.h"
 
 int main() {
-    std::cout << "8-bit CPU Emulator" << std::endl;
-    std::cout << "My virtual CPU project has started!" << std::endl;
+    CPU cpu;
+
+    cpu.register_a = 5;
+    std::cout << "Register A before ADD: "
+              << static_cast<int>(cpu.register_a)
+              << std::endl;
+
+    cpu.add(3);
+
+    std::cout << "Register A after ADD: "
+              << static_cast<int>(cpu.register_a)
+              << std::endl;
+
+    cpu.register_a = 250;
+    cpu.add(10);
+
+    std::cout << "Register A after 250 + 10: "
+              << static_cast<int>(cpu.register_a)
+              << std::endl;
 
     return 0;
 }
