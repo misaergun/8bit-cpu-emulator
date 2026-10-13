@@ -5,21 +5,29 @@
 int main() {
     CPU cpu;
 
-    cpu.register_a = 5;
-    std::cout << "Register A before ADD: "
+    std::cout << "Initial register A: "
               << static_cast<int>(cpu.register_a)
               << std::endl;
 
-    cpu.add(3);
-
-    std::cout << "Register A after ADD: "
-              << static_cast<int>(cpu.register_a)
+    std::cout << "Initial memory at address 10: "
+              << static_cast<int>(cpu.read_memory(10))
               << std::endl;
 
-    cpu.register_a = 250;
-    cpu.add(10);
+    cpu.write_memory(10, 5);
+    cpu.write_memory(11, 3);
 
-    std::cout << "Register A after 250 + 10: "
+    std::cout << "Memory at address 10: "
+              << static_cast<int>(cpu.read_memory(10))
+              << std::endl;
+
+    std::cout << "Memory at address 11: "
+              << static_cast<int>(cpu.read_memory(11))
+              << std::endl;
+
+    cpu.register_a = cpu.read_memory(10);
+    cpu.add(cpu.read_memory(11));
+
+    std::cout << "Register A after adding memory values: "
               << static_cast<int>(cpu.register_a)
               << std::endl;
 
