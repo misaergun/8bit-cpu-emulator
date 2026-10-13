@@ -2,6 +2,7 @@
 #include <iostream>
 #include <vector>
 #include <limits>
+#include <iomanip>
 #include "cpu.h"
 
 void load_program(CPU& cpu, const std::vector<uint8_t>& program) {
@@ -77,6 +78,40 @@ void inspect_memory(const CPU& cpu, uint16_t address) {
               << '\n';
 }
 
+void dump_memory(const CPU& cpu, uint16_t start, uint16_t count) {
+    if (start >= CPU::MEMORY_SIZE ||
+        count == 0 ||
+        count > CPU::MEMORY_SIZE - start) {
+        std::cerr << "Invalid memory range.\n";
+        return;
+    }
+
+    std::cout << "\nMemory Dump\n";
+    std::cout << "Address   Hex   Decimal\n";
+    std::cout << "-----------------------\n";
+
+    for (uint16_t i = 0; i < count; ++i) {
+        uint16_t address = start + i;
+        uint8_t value = cpu.read_memory(address);
+
+        std::cout << "0x"
+                  << std::hex << std::uppercase
+                  << std::setw(2) << std::setfill('0')
+                  << address
+                  << "      "
+                  << std::setw(2)
+                  << static_cast<int>(value)
+                  << "    "
+                  << std::dec
+                  << std::setw(3)
+                  << static_cast<int>(value)
+                  << '\n';
+    }
+
+    std::cout << std::dec;
+}
+
+
 
 int main() {
     CPU cpu;
@@ -147,6 +182,7 @@ int main() {
     }
 
 
+    
     char inspect_choice;
 
     std::cout << "\nInspect memory? (y/n): ";
@@ -164,21 +200,30 @@ int main() {
         }
 
         inspect_memory(cpu, address);
+
+        char dump_choice;
+        std::cout << "\nDump a memory range? (y/n): ";
+        std::cin >> dump_choice;
+
+        if (dump_choice == 'y' || dump_choice == 'Y') {
+            uint16_t start;
+            uint16_t count;
+
+            std::cout << "Start address (0-255): ";
+            std::cin >> start;
+
+            std::cout << "Number of bytes: ";
+            std::cin >> count;
+
+            dump_memory(cpu, start, count);
+        }
     }
 
-
-    std::cout << "Final comparison result: "
-              << static_cast<int>(cpu.register_a)
-              << '\n';
-
-    return 0;
-
-
-
-
+ 
     std::cout << "Final comparison result: "
               << static_cast<int>(cpu.register_a)
               << '\n';
 
     return 0;
 }
+
