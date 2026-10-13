@@ -16,6 +16,8 @@ public:
     static constexpr uint8_t OP_SUB = 3;
     static constexpr uint8_t OP_JMP = 4;
     static constexpr uint8_t OP_JZ = 5;
+    static constexpr uint8_t OP_LOAD_MEM = 6;
+    static constexpr uint8_t OP_STORE = 7;
     static constexpr uint8_t OP_HALT = 255;
 
     uint8_t register_a = 0;
@@ -104,6 +106,19 @@ public:
 
                 break;
             }
+
+            case OP_LOAD_MEM: {
+                uint8_t address = fetch();
+                register_a = read_memory(address);
+                break;
+            }
+
+            case OP_STORE: {
+                uint8_t address = fetch();
+                write_memory(address, register_a);
+                break;
+            }
+
 
             case OP_HALT:
                 halted = true;

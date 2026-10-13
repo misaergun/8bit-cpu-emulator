@@ -167,6 +167,39 @@ int main() {
     std::cout << "PASS: Reset CPU state" << std::endl;
 
 
+    // Test 11: Load value from memory
+    CPU load_mem_cpu;
+    load_mem_cpu.write_memory(20, 42);
+    load_mem_cpu.write_memory(0, CPU::OP_LOAD_MEM);
+    load_mem_cpu.write_memory(1, 20);
+    load_mem_cpu.write_memory(2, CPU::OP_HALT);
+
+    load_mem_cpu.run();
+
+    if (load_mem_cpu.register_a != 42) {
+        std::cerr << "FAIL: Load from memory" << std::endl;
+        return 1;
+    }
+
+    std::cout << "PASS: Load from memory" << std::endl;
+
+
+    // Test 12: Store register A in memory
+    CPU store_cpu;
+    store_cpu.write_memory(0, CPU::OP_LOAD);
+    store_cpu.write_memory(1, 73);
+    store_cpu.write_memory(2, CPU::OP_STORE);
+    store_cpu.write_memory(3, 30);
+    store_cpu.write_memory(4, CPU::OP_HALT);
+
+    store_cpu.run();
+
+    if (store_cpu.read_memory(30) != 73) {
+        std::cerr << "FAIL: Store to memory" << std::endl;
+        return 1;
+    }
+
+    std::cout << "PASS: Store to memory" << std::endl;
 
     std::cout << "All tests passed." << std::endl;
     return 0;
