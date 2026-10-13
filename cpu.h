@@ -25,6 +25,7 @@ public:
     static constexpr uint8_t OP_ADD_B = 12;
     static constexpr uint8_t OP_SUB_B = 13;
     static constexpr uint8_t OP_CMP = 14;
+    static constexpr uint8_t OP_JE = 15;
     static constexpr uint8_t OP_HALT = 255;
 
     uint8_t register_a = 0;
@@ -164,6 +165,16 @@ public:
 
             case OP_CMP: {
                 zero_flag = (register_a == register_b);
+                break;
+            }
+
+            case OP_JE: {
+                uint8_t address = fetch();
+
+                if (zero_flag) {
+                    program_counter = address;
+                }
+
                 break;
             }
 

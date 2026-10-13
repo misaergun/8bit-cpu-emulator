@@ -326,6 +326,47 @@ int main() {
 
     std::cout << "PASS: Compare equal registers" << std::endl;
 
+    // Test 21: Jump when registers are equal
+    CPU je_equal_cpu;
+    je_equal_cpu.register_a = 10;
+    je_equal_cpu.register_b = 10;
+    je_equal_cpu.write_memory(0, CPU::OP_CMP);
+    je_equal_cpu.write_memory(1, CPU::OP_JE);
+    je_equal_cpu.write_memory(2, 6);
+    je_equal_cpu.write_memory(3, CPU::OP_LOAD);
+    je_equal_cpu.write_memory(4, 99);
+    je_equal_cpu.write_memory(6, CPU::OP_HALT);
+    je_equal_cpu.run();
+
+    if (je_equal_cpu.register_a != 10 ||
+        !je_equal_cpu.halted) {
+        std::cerr << "FAIL: JE when registers are equal" << std::endl;
+        return 1;
+    }
+
+    std::cout << "PASS: JE when registers are equal" << std::endl;
+
+    // Test 22: Do not jump when registers are different
+    CPU je_different_cpu;
+    je_different_cpu.register_a = 10;
+    je_different_cpu.register_b = 5;
+    je_different_cpu.write_memory(0, CPU::OP_CMP);
+    je_different_cpu.write_memory(1, CPU::OP_JE);
+    je_different_cpu.write_memory(2, 6);
+    je_different_cpu.write_memory(3, CPU::OP_LOAD);
+    je_different_cpu.write_memory(4, 99);
+    je_different_cpu.write_memory(5, CPU::OP_HALT);
+    je_different_cpu.write_memory(6, CPU::OP_HALT);
+    je_different_cpu.run();
+
+    if (je_different_cpu.register_a != 99 ||
+        !je_different_cpu.halted) {
+        std::cerr << "FAIL: JE when registers differ" << std::endl;
+        return 1;
+    }
+
+    std::cout << "PASS: JE when registers differ" << std::endl;
+
 
     std::cout << "All tests passed." << std::endl;
     return 0;
