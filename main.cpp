@@ -1,6 +1,7 @@
 
 #include <iostream>
 #include <vector>
+#include <limits>
 #include "cpu.h"
 
 void load_program(CPU& cpu, const std::vector<uint8_t>& program) {
@@ -82,20 +83,60 @@ int main() {
         CPU::OP_HALT
     };
 
+    
     load_program(cpu, program);
 
-    
-    while (!cpu.halted) {
-        uint16_t instruction_address = cpu.program_counter;
-        uint8_t instruction = cpu.read_memory(instruction_address);
+    char mode;
+    std::cout << "Choose execution mode:\n";
+    std::cout << "s - Step mode\n";
+    std::cout << "r - Run mode\n";
+    std::cout << "Your choice: ";
+    std::cin >> mode;
 
-        std::cout << "Executing: "
-                << instruction_name(instruction)
-                << " (address " << instruction_address << ")\n";
+    if (mode == 's' || mode == 'S') {
+        while (!cpu.halted) {
+            uint16_t instruction_address = cpu.program_counter;
+            uint8_t instruction = cpu.read_memory(instruction_address);
 
-        cpu.step();
-        print_cpu_state(cpu);
+            std::cout << "\nExecuting: "
+                      << instruction_name(instruction)
+                      << " (address " << instruction_address << ")\n";
+
+            cpu.step();
+            print_cpu_state(cpu);
+
+            if (!cpu.halted) {
+                std::cout << "Press Enter for next instruction...";
+                std::cin.ignore(
+                    std::numeric_limits<std::streamsize>::max(), '\n'
+                );
+                std::cin.get();
+            }
+        }
+    } else if (mode == 'r' || mode == 'R') {
+        while (!cpu.halted) {
+            uint16_t instruction_address = cpu.program_counter;
+            uint8_t instruction = cpu.read_memory(instruction_address);
+
+            std::cout << "Executing: "
+                      << instruction_name(instruction)
+                      << " (address " << instruction_address << ")\n";
+
+            cpu.step();
+            print_cpu_state(cpu);
+        }
+    } else {
+        std::cerr << "Invalid mode. Choose 's' or 'r'.\n";
+        return 1;
     }
+
+    std::cout << "Final comparison result: "
+              << static_cast<int>(cpu.register_a)
+              << '\n';
+
+    return 0;
+
+
 
 
     std::cout << "Final comparison result: "
