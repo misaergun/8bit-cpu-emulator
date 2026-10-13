@@ -7,9 +7,10 @@
 
 class CPU {
 public:
-    uint8_t register_a = 0;
-
     static constexpr uint16_t MEMORY_SIZE = 256;
+
+    uint8_t register_a = 0;
+    uint8_t program_counter = 0;
 
     std::array<uint8_t, MEMORY_SIZE> memory{};
 
@@ -25,6 +26,11 @@ public:
 
     uint8_t read_memory(uint8_t address) const {
         return memory[address];
+    }
+
+    void advance_program_counter() {
+        program_counter =
+            static_cast<uint8_t>(program_counter + 1);
     }
 };
 
