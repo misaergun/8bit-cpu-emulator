@@ -277,6 +277,23 @@ int main() {
 
     std::cout << "PASS: Move A to B" << std::endl;
 
+    // Test 18: Add register B to register A
+    CPU add_b_cpu;
+    add_b_cpu.register_a = 10;
+    add_b_cpu.register_b = 5;
+    add_b_cpu.write_memory(0, CPU::OP_ADD_B);
+    add_b_cpu.write_memory(1, CPU::OP_HALT);
+    add_b_cpu.run();
+
+    if (add_b_cpu.register_a != 15 ||
+        add_b_cpu.register_b != 5) {
+        std::cerr << "FAIL: Add register B to A" << std::endl;
+        return 1;
+    }
+
+    std::cout << "PASS: Add register B to A" << std::endl;
+
+
 
 
     std::cout << "All tests passed." << std::endl;

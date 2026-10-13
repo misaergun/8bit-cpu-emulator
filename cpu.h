@@ -22,6 +22,7 @@ public:
     static constexpr uint8_t OP_STORE_B = 9;
     static constexpr uint8_t OP_MOV_A_B = 10;
     static constexpr uint8_t OP_MOV_B_A = 11;
+    static constexpr uint8_t OP_ADD_B = 12;
     static constexpr uint8_t OP_HALT = 255;
 
     uint8_t register_a = 0;
@@ -101,6 +102,12 @@ public:
                 add(value);
                 break;
             }
+
+            case OP_ADD_B: {
+                add(register_b);
+                break;
+            }
+
 
             case OP_SUB: {
                 uint8_t value = fetch();
