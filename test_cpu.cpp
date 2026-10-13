@@ -402,6 +402,45 @@ int main() {
 
     std::cout << "PASS: A greater than B" << std::endl;
 
+    
+    // Test 25: Jump when A is less than B
+    CPU jl_cpu;
+    jl_cpu.register_a = 3;
+    jl_cpu.register_b = 5;
+    jl_cpu.write_memory(0, CPU::OP_CMP);
+    jl_cpu.write_memory(1, CPU::OP_JL);
+    jl_cpu.write_memory(2, 6);
+    jl_cpu.write_memory(3, CPU::OP_LOAD);
+    jl_cpu.write_memory(4, 99);
+    jl_cpu.write_memory(6, CPU::OP_HALT);
+    jl_cpu.run();
+
+    if (jl_cpu.register_a != 3 || !jl_cpu.halted) {
+        std::cerr << "FAIL: JL when A is less than B" << std::endl;
+        return 1;
+    }
+
+    std::cout << "PASS: JL when A is less than B" << std::endl;
+
+    // Test 26: Jump when A is greater than B
+    CPU jg_cpu;
+    jg_cpu.register_a = 8;
+    jg_cpu.register_b = 5;
+    jg_cpu.write_memory(0, CPU::OP_CMP);
+    jg_cpu.write_memory(1, CPU::OP_JG);
+    jg_cpu.write_memory(2, 6);
+    jg_cpu.write_memory(3, CPU::OP_LOAD);
+    jg_cpu.write_memory(4, 99);
+    jg_cpu.write_memory(6, CPU::OP_HALT);
+    jg_cpu.run();
+
+    if (jg_cpu.register_a != 8 || !jg_cpu.halted) {
+        std::cerr << "FAIL: JG when A is greater than B" << std::endl;
+        return 1;
+    }
+
+    std::cout << "PASS: JG when A is greater than B" << std::endl;
+
     std::cout << "All tests passed." << std::endl;
     return 0;
 }

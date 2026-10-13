@@ -26,6 +26,8 @@ public:
     static constexpr uint8_t OP_SUB_B = 13;
     static constexpr uint8_t OP_CMP = 14;
     static constexpr uint8_t OP_JE = 15;
+    static constexpr uint8_t OP_JL = 16;
+    static constexpr uint8_t OP_JG = 17;
     static constexpr uint8_t OP_HALT = 255;
 
     uint8_t register_a = 0;
@@ -181,6 +183,27 @@ public:
 
                 break;
             }
+
+            case OP_JL: {
+                uint8_t address = fetch();
+
+                if (less_flag) {
+                    program_counter = address;
+                }
+
+                break;
+            }
+
+            case OP_JG: {
+                uint8_t address = fetch();
+
+                if (greater_flag) {
+                    program_counter = address;
+                }
+
+                break;
+            }
+
 
             case OP_HALT:
                 halted = true;
