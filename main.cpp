@@ -99,7 +99,8 @@ void dump_memory(const CPU& cpu, uint16_t start, uint16_t count) {
                   << std::setw(2) << std::setfill('0')
                   << address
                   << "      "
-                  << std::setw(2)
+                  << std::setfill(' ')
+                  << std::setw(3)
                   << static_cast<int>(value)
                   << "    "
                   << std::dec
