@@ -14,11 +14,10 @@ void load_program(CPU& cpu, const std::vector<uint8_t>& program) {
     }
 }
 
-
-std::vector<uint8_t> comparison_program() {
+std::vector<uint8_t> comparison_program(uint8_t first, uint8_t second) {
     return {
-        CPU::OP_LOAD, 8,
-        CPU::OP_LOAD_B, 5,
+        CPU::OP_LOAD, first,
+        CPU::OP_LOAD_B, second,
         CPU::OP_CMP,
         CPU::OP_JL, 12,
         CPU::OP_JG, 16,
@@ -35,24 +34,25 @@ std::vector<uint8_t> comparison_program() {
     };
 }
 
-std::vector<uint8_t> addition_program() {
+
+
+std::vector<uint8_t> addition_program(uint8_t first, uint8_t second) {
     return {
-        CPU::OP_LOAD, 8,
-        CPU::OP_LOAD_B, 5,
+        CPU::OP_LOAD, first,
+        CPU::OP_LOAD_B, second,
         CPU::OP_ADD_B,
         CPU::OP_HALT
     };
 }
 
-std::vector<uint8_t> subtraction_program() {
+std::vector<uint8_t> subtraction_program(uint8_t first, uint8_t second) {
     return {
-        CPU::OP_LOAD, 8,
-        CPU::OP_LOAD_B, 5,
+        CPU::OP_LOAD, first,
+        CPU::OP_LOAD_B, second,
         CPU::OP_SUB_B,
         CPU::OP_HALT
     };
 }
-
 
 const char* instruction_name(uint8_t instruction) {
     switch (instruction) {
@@ -112,7 +112,7 @@ void inspect_memory(const CPU& cpu, uint16_t address) {
               << static_cast<int>(value) << '\n';
 
     std::cout << "Value (hex): 0x"
-              << std::hex
+              << std::hex << std::uppercase
               << static_cast<int>(value)
               << std::dec
               << '\n';
@@ -159,7 +159,11 @@ bool execute_program(CPU& cpu) {
     std::cout << "s - Step mode\n";
     std::cout << "r - Run mode\n";
     std::cout << "Your choice: ";
-    std::cin >> mode;
+
+    if (!(std::cin >> mode)) {
+        std::cerr << "Invalid input.\n";
+        return false;
+    }
 
     if (mode == 's' || mode == 'S') {
         while (!cpu.halted) {
@@ -180,6 +184,10 @@ bool execute_program(CPU& cpu) {
                     std::numeric_limits<std::streamsize>::max(), '\n'
                 );
                 std::cin.get();
+
+                if (!std::cin) {
+                    return false;
+                }
             }
         }
     } else if (mode == 'r' || mode == 'R') {
@@ -206,7 +214,9 @@ void inspect_memory_menu(const CPU& cpu) {
     char inspect_choice;
 
     std::cout << "\nInspect memory? (y/n): ";
-    std::cin >> inspect_choice;
+    if (!(std::cin >> inspect_choice)) {
+        return;
+    }
 
     if (inspect_choice != 'y' && inspect_choice != 'Y') {
         return;
@@ -229,7 +239,9 @@ void inspect_memory_menu(const CPU& cpu) {
     char dump_choice;
 
     std::cout << "\nDump a memory range? (y/n): ";
-    std::cin >> dump_choice;
+    if (!(std::cin >> dump_choice)) {
+        return;
+    }
 
     if (dump_choice == 'y' || dump_choice == 'Y') {
         uint16_t start;
@@ -269,9 +281,9 @@ int main() {
 
         std::cout << "\n=== 8-Bit CPU Emulator ===\n";
         std::cout << "Choose a program:\n";
-        std::cout << "1 - Comparison (8 vs 5)\n";
-        std::cout << "2 - Addition (8 + 5)\n";
-        std::cout << "3 - Subtraction (8 - 5)\n";
+        std::cout << "1 - Comparison\n";
+        std::cout << "2 - Addition\n";
+        std::cout << "3 - Subtraction\n";
         std::cout << "Your choice: ";
 
         if (!(std::cin >> program_choice)) {
@@ -279,46 +291,97 @@ int main() {
             return 1;
         }
 
+        if (program_choice < 1 || program_choice > 3) {
+            std::cerr << "Invalid program choice.\n";
+            continue;
+        }
+
+        uint16_t first;
+        uint16_t second;
+
+        std::cout << "Enter the first number (0-255): ";
+        if (!(std::cin >> first) || first > 255) {
+            std::cerr << "Invalid number. Enter a value from 0 to 255.\n";
+            std::cin.clear();
+            std::cin.ignore(
+                std::numeric_limits<std::streamsize>::max(), '\n'
+            );
+            continue;
+        }
+
+        std::cout << "Enter the second number (0-255): ";
+        if (!(std::cin >> second) || second > 255) {
+            std::cerr << "Invalid number. Enter a value from 0 to 255.\n";
+            std::cin.clear();
+            std::cin.ignore(
+                std::numeric_limits<std::streamsize>::max(), '\n'
+            );
+            continue;
+        }
+
+        uint8_t a = static_cast<uint8_t>(first);
+        uint8_t b = static_cast<uint8_t>(second);
+
         switch (program_choice) {
             case 1:
-                program = comparison_program();
+                program = comparison_program(a, b);
                 std::cout << "Comparison program selected.\n";
                 break;
 
             case 2:
-                program = addition_program();
+                program = addition_program(a, b);
                 std::cout << "Addition program selected.\n";
                 break;
 
             case 3:
-                program = subtraction_program();
+                program = subtraction_program(a, b);
                 std::cout << "Subtraction program selected.\n";
                 break;
-
-            default:
-                std::cerr << "Invalid program choice.\n";
-                continue;
         }
 
         cpu.reset();
         load_program(cpu, program);
 
-        bool executed = execute_program(cpu);
-
-        if (!executed) {
+        if (!execute_program(cpu)) {
             return 1;
         }
 
         inspect_memory_menu(cpu);
 
+        
         std::cout << "\nFinal Register A: "
-                  << static_cast<int>(cpu.register_a)
-                  << '\n';
+                << static_cast<int>(cpu.register_a)
+                << '\n';
+
+        if (program_choice == 1) {
+            std::cout << "Comparison result: ";
+
+            switch (cpu.register_a) {
+                case 1:
+                    std::cout << "A < B\n";
+                    break;
+
+                case 2:
+                    std::cout << "A > B\n";
+                    break;
+
+                case 3:
+                    std::cout << "A == B\n";
+                    break;
+
+                default:
+                    std::cout << "Unknown comparison result\n";
+                    break;
+            }
+        }
+
 
         char choice;
 
         std::cout << "\nRun another program? (y/n): ";
-        std::cin >> choice;
+        if (!(std::cin >> choice)) {
+            break;
+        }
 
         if (choice != 'y' && choice != 'Y') {
             std::cout << "Exiting CPU emulator.\n";

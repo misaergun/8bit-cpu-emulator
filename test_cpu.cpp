@@ -456,6 +456,118 @@ int main() {
 
     std::cout << "PASS: JG when A is greater than B" << std::endl;
 
+    
+    // Test 27: Addition program (12 + 4 = 16)
+    CPU addition_test;
+    addition_test.write_memory(0, CPU::OP_LOAD);
+    addition_test.write_memory(1, 12);
+    addition_test.write_memory(2, CPU::OP_LOAD_B);
+    addition_test.write_memory(3, 4);
+    addition_test.write_memory(4, CPU::OP_ADD_B);
+    addition_test.write_memory(5, CPU::OP_HALT);
+    addition_test.run();
+
+    if (addition_test.register_a != 16 ||
+        !addition_test.halted) {
+        std::cerr << "FAIL: Addition program (12 + 4)" << std::endl;
+        return 1;
+    }
+
+    std::cout << "PASS: Addition program (12 + 4)" << std::endl;
+
+
+    // Test 28: Subtraction program (12 - 4 = 8)
+    CPU subtraction_test;
+    subtraction_test.write_memory(0, CPU::OP_LOAD);
+    subtraction_test.write_memory(1, 12);
+    subtraction_test.write_memory(2, CPU::OP_LOAD_B);
+    subtraction_test.write_memory(3, 4);
+    subtraction_test.write_memory(4, CPU::OP_SUB_B);
+    subtraction_test.write_memory(5, CPU::OP_HALT);
+    subtraction_test.run();
+
+    if (subtraction_test.register_a != 8 ||
+        !subtraction_test.halted) {
+        std::cerr << "FAIL: Subtraction program (12 - 4)" << std::endl;
+        return 1;
+    }
+
+    std::cout << "PASS: Subtraction program (12 - 4)" << std::endl;
+
+
+    // Test 29: Equality comparison program (7 == 7)
+    CPU equal_program_test;
+    const uint8_t equal_program[] = {
+        CPU::OP_LOAD, 7,
+        CPU::OP_LOAD_B, 7,
+        CPU::OP_CMP,
+        CPU::OP_JL, 12,
+        CPU::OP_JG, 16,
+        CPU::OP_JE, 20,
+        CPU::OP_HALT,
+        CPU::OP_LOAD, 1,
+        CPU::OP_HALT,
+        0,
+        CPU::OP_LOAD, 2,
+        CPU::OP_HALT,
+        0,
+        CPU::OP_LOAD, 3,
+        CPU::OP_HALT
+    };
+
+    for (size_t i = 0; i < sizeof(equal_program); ++i) {
+        equal_program_test.write_memory(
+            static_cast<uint16_t>(i), equal_program[i]
+        );
+    }
+
+    equal_program_test.run();
+
+    if (equal_program_test.register_a != 3 ||
+        !equal_program_test.halted) {
+        std::cerr << "FAIL: Equality comparison program" << std::endl;
+        return 1;
+    }
+
+    std::cout << "PASS: Equality comparison program" << std::endl;
+
+
+    // Test 30: Less-than comparison program (4 < 12)
+    CPU less_program_test;
+    const uint8_t less_program[] = {
+        CPU::OP_LOAD, 4,
+        CPU::OP_LOAD_B, 12,
+        CPU::OP_CMP,
+        CPU::OP_JL, 12,
+        CPU::OP_JG, 16,
+        CPU::OP_JE, 20,
+        CPU::OP_HALT,
+        CPU::OP_LOAD, 1,
+        CPU::OP_HALT,
+        0,
+        CPU::OP_LOAD, 2,
+        CPU::OP_HALT,
+        0,
+        CPU::OP_LOAD, 3,
+        CPU::OP_HALT
+    };
+
+    for (size_t i = 0; i < sizeof(less_program); ++i) {
+        less_program_test.write_memory(
+            static_cast<uint16_t>(i), less_program[i]
+        );
+    }
+
+    less_program_test.run();
+
+    if (less_program_test.register_a != 1 ||
+        !less_program_test.halted) {
+        std::cerr << "FAIL: Less-than comparison program" << std::endl;
+        return 1;
+    }
+
+    std::cout << "PASS: Less-than comparison program" << std::endl;
+    
     std::cout << "All tests passed." << std::endl;
     return 0;
 }
