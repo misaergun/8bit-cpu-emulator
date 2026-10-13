@@ -18,9 +18,12 @@ public:
     static constexpr uint8_t OP_JZ = 5;
     static constexpr uint8_t OP_LOAD_MEM = 6;
     static constexpr uint8_t OP_STORE = 7;
+    static constexpr uint8_t OP_LOAD_B = 8;
+    static constexpr uint8_t OP_STORE_B = 9;
     static constexpr uint8_t OP_HALT = 255;
 
     uint8_t register_a = 0;
+    uint8_t register_b = 0;
     uint16_t program_counter = 0;
 
     std::array<uint8_t, MEMORY_SIZE> memory{};
@@ -76,6 +79,18 @@ public:
             case OP_LOAD: {
                 uint8_t value = fetch();
                 register_a = value;
+                break;
+            }
+
+            case OP_LOAD_B: {
+                uint8_t value = fetch();
+                register_b = value;
+                break;
+            }
+
+            case OP_STORE_B: {
+                uint8_t address = fetch();
+                write_memory(address, register_b);
                 break;
             }
 
@@ -135,6 +150,7 @@ public:
 
     void reset() {
         register_a = 0;
+        register_b = 0;
         program_counter = 0;
         halted = false;
         memory.fill(0);

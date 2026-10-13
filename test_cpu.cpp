@@ -201,6 +201,50 @@ int main() {
 
     std::cout << "PASS: Store to memory" << std::endl;
 
+
+    // Test 13: Load a value into register B
+    CPU load_b_cpu;
+    load_b_cpu.write_memory(0, CPU::OP_LOAD_B);
+    load_b_cpu.write_memory(1, 55);
+    load_b_cpu.write_memory(2, CPU::OP_HALT);
+    load_b_cpu.run();
+
+    if (load_b_cpu.register_b != 55) {
+        std::cerr << "FAIL: Load register B" << std::endl;
+        return 1;
+    }
+
+    std::cout << "PASS: Load register B" << std::endl;
+
+    // Test 14: Store register B in memory
+    CPU store_b_cpu;
+    store_b_cpu.write_memory(0, CPU::OP_LOAD_B);
+    store_b_cpu.write_memory(1, 77);
+    store_b_cpu.write_memory(2, CPU::OP_STORE_B);
+    store_b_cpu.write_memory(3, 30);
+    store_b_cpu.write_memory(4, CPU::OP_HALT);
+    store_b_cpu.run();
+
+    if (store_b_cpu.read_memory(30) != 77) {
+        std::cerr << "FAIL: Store register B" << std::endl;
+        return 1;
+    }
+
+    std::cout << "PASS: Store register B" << std::endl;
+
+    // Test 15: Reset register B
+    CPU reset_b_cpu;
+    reset_b_cpu.register_b = 99;
+    reset_b_cpu.reset();
+
+    if (reset_b_cpu.register_b != 0) {
+        std::cerr << "FAIL: Reset register B" << std::endl;
+        return 1;
+    }
+
+    std::cout << "PASS: Reset register B" << std::endl;
+
+
     std::cout << "All tests passed." << std::endl;
     return 0;
 }
