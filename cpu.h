@@ -20,6 +20,8 @@ public:
     static constexpr uint8_t OP_STORE = 7;
     static constexpr uint8_t OP_LOAD_B = 8;
     static constexpr uint8_t OP_STORE_B = 9;
+    static constexpr uint8_t OP_MOV_A_B = 10;
+    static constexpr uint8_t OP_MOV_B_A = 11;
     static constexpr uint8_t OP_HALT = 255;
 
     uint8_t register_a = 0;
@@ -131,6 +133,16 @@ public:
             case OP_STORE: {
                 uint8_t address = fetch();
                 write_memory(address, register_a);
+                break;
+            }
+
+            case OP_MOV_A_B: {
+                register_a = register_b;
+                break;
+            }
+
+            case OP_MOV_B_A: {
+                register_b = register_a;
                 break;
             }
 

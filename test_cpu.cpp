@@ -245,6 +245,40 @@ int main() {
     std::cout << "PASS: Reset register B" << std::endl;
 
 
+    // Test 16: Copy register B to register A
+    CPU mov_a_b_cpu;
+    mov_a_b_cpu.register_a = 10;
+    mov_a_b_cpu.register_b = 5;
+    mov_a_b_cpu.write_memory(0, CPU::OP_MOV_A_B);
+    mov_a_b_cpu.write_memory(1, CPU::OP_HALT);
+    mov_a_b_cpu.run();
+
+    if (mov_a_b_cpu.register_a != 5 ||
+        mov_a_b_cpu.register_b != 5) {
+        std::cerr << "FAIL: Move B to A" << std::endl;
+        return 1;
+    }
+
+    std::cout << "PASS: Move B to A" << std::endl;
+
+    // Test 17: Copy register A to register B
+    CPU mov_b_a_cpu;
+    mov_b_a_cpu.register_a = 25;
+    mov_b_a_cpu.register_b = 7;
+    mov_b_a_cpu.write_memory(0, CPU::OP_MOV_B_A);
+    mov_b_a_cpu.write_memory(1, CPU::OP_HALT);
+    mov_b_a_cpu.run();
+
+    if (mov_b_a_cpu.register_a != 25 ||
+        mov_b_a_cpu.register_b != 25) {
+        std::cerr << "FAIL: Move A to B" << std::endl;
+        return 1;
+    }
+
+    std::cout << "PASS: Move A to B" << std::endl;
+
+
+
     std::cout << "All tests passed." << std::endl;
     return 0;
 }
