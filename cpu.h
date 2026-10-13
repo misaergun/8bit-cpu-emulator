@@ -117,11 +117,23 @@ public:
         }
     }
 
-    void run() {
-        while (!halted) {
-            step();
+    
+void run() {
+    constexpr uint32_t MAX_STEPS = 1000;
+    uint32_t steps = 0;
+
+    while (!halted) {
+        if (steps >= MAX_STEPS) {
+            throw std::runtime_error(
+                "Maximum instruction limit reached"
+            );
         }
+
+        step();
+        ++steps;
     }
+}
+
 };
 
 #endif

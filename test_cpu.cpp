@@ -2,6 +2,7 @@
 #include <iostream>
 #include <stdexcept>
 #include "cpu.h"
+#include <string>
 
 int main() {
     // Test 1: Normal program
@@ -123,6 +124,28 @@ int main() {
     }
 
     std::cout << "PASS: Loop until zero" << std::endl;
+
+
+    // Test 9: Detect an infinite loop
+    CPU infinite_cpu;
+    infinite_cpu.write_memory(0, CPU::OP_JMP);
+    infinite_cpu.write_memory(1, 0);
+
+    try {
+        infinite_cpu.run();
+        std::cerr << "FAIL: Infinite loop detection" << std::endl;
+        return 1;
+    } catch (const std::runtime_error& error) {
+        if (std::string(error.what()) !=
+            "Maximum instruction limit reached") {
+            std::cerr << "FAIL: Unexpected error: "
+                      << error.what() << std::endl;
+            return 1;
+        }
+
+        std::cout << "PASS: Infinite loop detection" << std::endl;
+    }
+
 
     std::cout << "All tests passed." << std::endl;
     return 0;
