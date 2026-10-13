@@ -4,7 +4,7 @@
 
 #include <array>
 #include <cstdint>
-#include <iostream>
+#include <stdexcept>
 
 class CPU {
 public:
@@ -15,7 +15,7 @@ public:
     static constexpr uint8_t OP_HALT = 255;
 
     uint8_t register_a = 0;
-    uint8_t program_counter = 0;
+    uint16_t program_counter = 0;
 
     std::array<uint8_t, MEMORY_SIZE> memory{};
 
@@ -27,23 +27,30 @@ public:
         );
     }
 
-    void write_memory(uint8_t address, uint8_t value) {
+    void write_memory(uint16_t address, uint8_t value) {
+        if (address >= MEMORY_SIZE) {
+            throw std::out_of_range(
+                "Memory write address out of range"
+            );
+        }
+
         memory[address] = value;
     }
 
-    uint8_t read_memory(uint8_t address) const {
+    uint8_t read_memory(uint16_t address) const {
+        if (address >= MEMORY_SIZE) {
+            throw std::out_of_range(
+                "Memory read address out of range"
+            );
+        }
+
         return memory[address];
     }
 
     uint8_t fetch() {
         uint8_t instruction = read_memory(program_counter);
-        advance_program_counter();
+        ++program_counter;
         return instruction;
-    }
-
-    void advance_program_counter() {
-        program_counter =
-            static_cast<uint8_t>(program_counter + 1);
     }
 
     void step() {
@@ -71,11 +78,10 @@ public:
                 break;
 
             default:
-                std::cerr << "Unknown instruction: "
-                          << static_cast<int>(instruction)
-                          << std::endl;
-                halted = true;
-                break;
+                throw std::runtime_error(
+                    "Unknown instruction: " +
+                    std::to_string(instruction)
+                );
         }
     }
 
