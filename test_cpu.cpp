@@ -368,6 +368,40 @@ int main() {
     std::cout << "PASS: JE when registers differ" << std::endl;
 
 
+    // Test 23: Compare less than and greater than
+    CPU compare_cpu;
+
+    compare_cpu.register_a = 3;
+    compare_cpu.register_b = 5;
+    compare_cpu.write_memory(0, CPU::OP_CMP);
+    compare_cpu.write_memory(1, CPU::OP_HALT);
+    compare_cpu.run();
+
+    if (compare_cpu.zero_flag ||
+        !compare_cpu.less_flag ||
+        compare_cpu.greater_flag) {
+        std::cerr << "FAIL: A less than B" << std::endl;
+        return 1;
+    }
+
+    std::cout << "PASS: A less than B" << std::endl;
+
+    compare_cpu.reset();
+    compare_cpu.register_a = 8;
+    compare_cpu.register_b = 5;
+    compare_cpu.write_memory(0, CPU::OP_CMP);
+    compare_cpu.write_memory(1, CPU::OP_HALT);
+    compare_cpu.run();
+
+    if (compare_cpu.zero_flag ||
+        compare_cpu.less_flag ||
+        !compare_cpu.greater_flag) {
+        std::cerr << "FAIL: A greater than B" << std::endl;
+        return 1;
+    }
+
+    std::cout << "PASS: A greater than B" << std::endl;
+
     std::cout << "All tests passed." << std::endl;
     return 0;
 }

@@ -36,6 +36,8 @@ public:
 
     bool halted = false;
     bool zero_flag = false;
+    bool less_flag = false;
+    bool greater_flag = false;
 
     void add(uint8_t value) {
         register_a = static_cast<uint8_t>(
@@ -162,9 +164,11 @@ public:
                 register_b = register_a;
                 break;
             }
-
+            
             case OP_CMP: {
                 zero_flag = (register_a == register_b);
+                less_flag = (register_a < register_b);
+                greater_flag = (register_a > register_b);
                 break;
             }
 
@@ -197,6 +201,8 @@ public:
         program_counter = 0;
         halted = false;
         zero_flag = false;
+        less_flag = false;
+        greater_flag = false;
         memory.fill(0);
     }
 
