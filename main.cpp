@@ -14,6 +14,46 @@ void load_program(CPU& cpu, const std::vector<uint8_t>& program) {
     }
 }
 
+
+std::vector<uint8_t> comparison_program() {
+    return {
+        CPU::OP_LOAD, 8,
+        CPU::OP_LOAD_B, 5,
+        CPU::OP_CMP,
+        CPU::OP_JL, 12,
+        CPU::OP_JG, 16,
+        CPU::OP_JE, 20,
+        CPU::OP_HALT,
+        CPU::OP_LOAD, 1,
+        CPU::OP_HALT,
+        0,
+        CPU::OP_LOAD, 2,
+        CPU::OP_HALT,
+        0,
+        CPU::OP_LOAD, 3,
+        CPU::OP_HALT
+    };
+}
+
+std::vector<uint8_t> addition_program() {
+    return {
+        CPU::OP_LOAD, 8,
+        CPU::OP_LOAD_B, 5,
+        CPU::OP_ADD_B,
+        CPU::OP_HALT
+    };
+}
+
+std::vector<uint8_t> subtraction_program() {
+    return {
+        CPU::OP_LOAD, 8,
+        CPU::OP_LOAD_B, 5,
+        CPU::OP_SUB_B,
+        CPU::OP_HALT
+    };
+}
+
+
 const char* instruction_name(uint8_t instruction) {
     switch (instruction) {
         case CPU::OP_LOAD: return "LOAD";
@@ -219,30 +259,50 @@ void inspect_memory_menu(const CPU& cpu) {
     }
 }
 
+
 int main() {
     CPU cpu;
 
-    const std::vector<uint8_t> program = {
-        CPU::OP_LOAD, 8,
-        CPU::OP_LOAD_B, 5,
-        CPU::OP_CMP,
-        CPU::OP_JL, 12,
-        CPU::OP_JG, 16,
-        CPU::OP_JE, 20,
-        CPU::OP_HALT,
-        CPU::OP_LOAD, 1,
-        CPU::OP_HALT,
-        0,
-        CPU::OP_LOAD, 2,
-        CPU::OP_HALT,
-        0,
-        CPU::OP_LOAD, 3,
-        CPU::OP_HALT
-    };
-
-    load_program(cpu, program);
-
     while (true) {
+        int program_choice;
+        std::vector<uint8_t> program;
+
+        std::cout << "\n=== 8-Bit CPU Emulator ===\n";
+        std::cout << "Choose a program:\n";
+        std::cout << "1 - Comparison (8 vs 5)\n";
+        std::cout << "2 - Addition (8 + 5)\n";
+        std::cout << "3 - Subtraction (8 - 5)\n";
+        std::cout << "Your choice: ";
+
+        if (!(std::cin >> program_choice)) {
+            std::cerr << "Invalid input.\n";
+            return 1;
+        }
+
+        switch (program_choice) {
+            case 1:
+                program = comparison_program();
+                std::cout << "Comparison program selected.\n";
+                break;
+
+            case 2:
+                program = addition_program();
+                std::cout << "Addition program selected.\n";
+                break;
+
+            case 3:
+                program = subtraction_program();
+                std::cout << "Subtraction program selected.\n";
+                break;
+
+            default:
+                std::cerr << "Invalid program choice.\n";
+                continue;
+        }
+
+        cpu.reset();
+        load_program(cpu, program);
+
         bool executed = execute_program(cpu);
 
         if (!executed) {
@@ -251,13 +311,13 @@ int main() {
 
         inspect_memory_menu(cpu);
 
-        std::cout << "\nFinal comparison result: "
+        std::cout << "\nFinal Register A: "
                   << static_cast<int>(cpu.register_a)
                   << '\n';
 
         char choice;
 
-        std::cout << "\nReset CPU and run again? (y/n): ";
+        std::cout << "\nRun another program? (y/n): ";
         std::cin >> choice;
 
         if (choice != 'y' && choice != 'Y') {
@@ -266,10 +326,9 @@ int main() {
         }
 
         cpu.reset();
-        load_program(cpu, program);
-
-        std::cout << "\nCPU has been reset and the program reloaded.\n";
+        std::cout << "\nCPU reset. Select the next program.\n";
     }
 
     return 0;
 }
+
