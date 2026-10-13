@@ -15,6 +15,7 @@ public:
     static constexpr uint8_t OP_ADD = 2;
     static constexpr uint8_t OP_SUB = 3;
     static constexpr uint8_t OP_JMP = 4;
+    static constexpr uint8_t OP_JZ = 5;
     static constexpr uint8_t OP_HALT = 255;
 
     uint8_t register_a = 0;
@@ -91,6 +92,16 @@ public:
             case OP_JMP: {
                 uint8_t address = fetch();
                 program_counter = address;
+                break;
+            }
+
+            case OP_JZ: {
+                uint8_t address = fetch();
+
+                if (register_a == 0) {
+                    program_counter = address;
+                }
+
                 break;
             }
 

@@ -5,19 +5,19 @@
 int main() {
     CPU cpu;
 
-    // a = 5
+    // A = 0
     cpu.write_memory(0, CPU::OP_LOAD);
-    cpu.write_memory(1, 5);
+    cpu.write_memory(1, 0);
 
-    // jump to address 6
-    cpu.write_memory(2, CPU::OP_JMP);
+    // If A is zero, jump to address 6
+    cpu.write_memory(2, CPU::OP_JZ);
     cpu.write_memory(3, 6);
 
-    // these instructions should be skipped
+    // This instruction should be skipped
     cpu.write_memory(4, CPU::OP_LOAD);
     cpu.write_memory(5, 99);
 
-    // stop at address 6
+    // Stop at address 6
     cpu.write_memory(6, CPU::OP_HALT);
 
     cpu.run();

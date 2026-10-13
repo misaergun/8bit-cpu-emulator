@@ -11,7 +11,6 @@ int main() {
     cpu.write_memory(2, CPU::OP_ADD);
     cpu.write_memory(3, 3);
     cpu.write_memory(4, CPU::OP_HALT);
-
     cpu.run();
 
     if (cpu.register_a != 8) {
@@ -41,7 +40,7 @@ int main() {
         std::cout << "PASS: Unknown instruction" << std::endl;
     }
 
-    // Test 4: Missing parameter at the end of memory
+    // Test 4: Missing parameter
     CPU incomplete_cpu;
     incomplete_cpu.write_memory(255, CPU::OP_LOAD);
     incomplete_cpu.program_counter = 255;
@@ -61,7 +60,6 @@ int main() {
     jump_cpu.write_memory(2, CPU::OP_LOAD);
     jump_cpu.write_memory(3, 99);
     jump_cpu.write_memory(4, CPU::OP_HALT);
-
     jump_cpu.run();
 
     if (jump_cpu.register_a != 0 || !jump_cpu.halted) {
@@ -69,6 +67,40 @@ int main() {
         return 1;
     }
     std::cout << "PASS: Unconditional jump" << std::endl;
+
+    // Test 6: Jump when register A is zero
+    CPU zero_cpu;
+    zero_cpu.write_memory(0, CPU::OP_LOAD);
+    zero_cpu.write_memory(1, 0);
+    zero_cpu.write_memory(2, CPU::OP_JZ);
+    zero_cpu.write_memory(3, 6);
+    zero_cpu.write_memory(4, CPU::OP_LOAD);
+    zero_cpu.write_memory(5, 99);
+    zero_cpu.write_memory(6, CPU::OP_HALT);
+    zero_cpu.run();
+
+    if (zero_cpu.register_a != 0 || !zero_cpu.halted) {
+        std::cerr << "FAIL: JZ when register A is zero" << std::endl;
+        return 1;
+    }
+    std::cout << "PASS: JZ when register A is zero" << std::endl;
+
+    // Test 7: Do not jump when register A is nonzero
+    CPU nonzero_cpu;
+    nonzero_cpu.write_memory(0, CPU::OP_LOAD);
+    nonzero_cpu.write_memory(1, 5);
+    nonzero_cpu.write_memory(2, CPU::OP_JZ);
+    nonzero_cpu.write_memory(3, 6);
+    nonzero_cpu.write_memory(4, CPU::OP_LOAD);
+    nonzero_cpu.write_memory(5, 99);
+    nonzero_cpu.write_memory(6, CPU::OP_HALT);
+    nonzero_cpu.run();
+
+    if (nonzero_cpu.register_a != 99 || !nonzero_cpu.halted) {
+        std::cerr << "FAIL: JZ when register A is nonzero" << std::endl;
+        return 1;
+    }
+    std::cout << "PASS: JZ when register A is nonzero" << std::endl;
 
     std::cout << "All tests passed." << std::endl;
     return 0;
