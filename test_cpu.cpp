@@ -800,6 +800,150 @@ int main() {
     }
     std::cout << "PASS: Shift right produces zero" << std::endl;
 
+
+    // Test 43: PUSH and POP preserve register A
+    CPU push_pop_cpu;
+    push_pop_cpu.write_memory(0, CPU::OP_LOAD);
+    push_pop_cpu.write_memory(1, 42);
+    push_pop_cpu.write_memory(2, CPU::OP_PUSH);
+    push_pop_cpu.write_memory(3, CPU::OP_LOAD);
+    push_pop_cpu.write_memory(4, 10);
+    push_pop_cpu.write_memory(5, CPU::OP_POP);
+    push_pop_cpu.write_memory(6, CPU::OP_HALT);
+    push_pop_cpu.run();
+
+    if (push_pop_cpu.register_a != 42 ||
+        push_pop_cpu.stack_pointer != CPU::MEMORY_SIZE ||
+        !push_pop_cpu.halted) {
+        std::cerr << "FAIL: PUSH and POP preserve register A"
+                  << std::endl;
+        return 1;
+    }
+    std::cout << "PASS: PUSH and POP preserve register A"
+              << std::endl;
+
+
+    // Test 44: Stack underflow
+    CPU underflow_cpu;
+    underflow_cpu.write_memory(0, CPU::OP_POP);
+    underflow_cpu.write_memory(1, CPU::OP_HALT);
+
+    try {
+        underflow_cpu.run();
+        std::cerr << "FAIL: Stack underflow" << std::endl;
+        return 1;
+    } catch (const std::runtime_error& error) {
+        if (std::string(error.what()) != "Stack underflow") {
+            std::cerr << "FAIL: Unexpected stack error: "
+                      << error.what() << std::endl;
+            return 1;
+        }
+        std::cout << "PASS: Stack underflow" << std::endl;
+    }
+
+
+    // Test 45: Stack overflow
+    CPU overflow_cpu;
+    overflow_cpu.stack_pointer = 0;
+    overflow_cpu.write_memory(0, CPU::OP_PUSH);
+    overflow_cpu.write_memory(1, CPU::OP_HALT);
+
+    try {
+        overflow_cpu.run();
+        std::cerr << "FAIL: Stack overflow" << std::endl;
+        return 1;
+    } catch (const std::runtime_error& error) {
+        if (std::string(error.what()) != "Stack overflow") {
+            std::cerr << "FAIL: Unexpected stack error: "
+                      << error.what() << std::endl;
+            return 1;
+        }
+        std::cout << "PASS: Stack overflow" << std::endl;
+    }
+
+
+    // Test 46: CALL and RET return to the main program
+    CPU call_ret_cpu;
+
+    call_ret_cpu.write_memory(0, CPU::OP_CALL);
+    call_ret_cpu.write_memory(1, 6);
+    call_ret_cpu.write_memory(2, CPU::OP_HALT);
+
+    // Subroutine at address 6
+    call_ret_cpu.write_memory(6, CPU::OP_LOAD);
+    call_ret_cpu.write_memory(7, 42);
+    call_ret_cpu.write_memory(8, CPU::OP_RET);
+
+    call_ret_cpu.run();
+
+    if (call_ret_cpu.register_a != 42 ||
+        call_ret_cpu.program_counter != 3 ||
+        call_ret_cpu.stack_pointer != CPU::MEMORY_SIZE ||
+        !call_ret_cpu.halted) {
+        std::cerr << "FAIL: CALL and RET return to main program"
+                  << std::endl;
+        return 1;
+    }
+
+    std::cout << "PASS: CALL and RET return to main program"
+              << std::endl;
+
+    
+    // Test 47: Nested CALL and RET
+    CPU nested_call_cpu;
+
+    // Main program
+    nested_call_cpu.write_memory(0, CPU::OP_CALL);
+    nested_call_cpu.write_memory(1, 10);
+    nested_call_cpu.write_memory(2, CPU::OP_HALT);
+
+    // Subroutine 1 at address 10
+    nested_call_cpu.write_memory(10, CPU::OP_CALL);
+    nested_call_cpu.write_memory(11, 20);
+    nested_call_cpu.write_memory(12, CPU::OP_LOAD);
+    nested_call_cpu.write_memory(13, 42);
+    nested_call_cpu.write_memory(14, CPU::OP_RET);
+
+    // Subroutine 2 at address 20
+    nested_call_cpu.write_memory(20, CPU::OP_LOAD);
+    nested_call_cpu.write_memory(21, 99);
+    nested_call_cpu.write_memory(22, CPU::OP_RET);
+
+    nested_call_cpu.run();
+
+    if (nested_call_cpu.register_a != 42 ||
+        nested_call_cpu.program_counter != 3 ||
+        nested_call_cpu.stack_pointer != CPU::MEMORY_SIZE ||
+        !nested_call_cpu.halted) {
+        std::cerr << "FAIL: Nested CALL and RET" << std::endl;
+        return 1;
+    }
+
+    std::cout << "PASS: Nested CALL and RET" << std::endl;
+
+
+    // Test 48: CALL stack overflow
+    CPU call_overflow_cpu;
+
+    call_overflow_cpu.stack_pointer = 1;
+    call_overflow_cpu.write_memory(0, CPU::OP_CALL);
+    call_overflow_cpu.write_memory(1, 10);
+    call_overflow_cpu.write_memory(10, CPU::OP_HALT);
+
+    try {
+        call_overflow_cpu.run();
+        std::cerr << "FAIL: CALL stack overflow" << std::endl;
+        return 1;
+    } catch (const std::runtime_error& error) {
+        if (std::string(error.what()) != "Stack overflow") {
+            std::cerr << "FAIL: Unexpected error: "
+                      << error.what() << std::endl;
+            return 1;
+        }
+
+        std::cout << "PASS: CALL stack overflow" << std::endl;
+    }
+
     
     std::cout << "All tests passed." << std::endl;
     return 0;
