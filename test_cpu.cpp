@@ -568,6 +568,138 @@ int main() {
 
     std::cout << "PASS: Less-than comparison program" << std::endl;
     
+    
+    // Test 31: Bitwise AND
+    CPU and_cpu;
+
+    and_cpu.write_memory(0, CPU::OP_LOAD);
+    and_cpu.write_memory(1, 12);
+    and_cpu.write_memory(2, CPU::OP_LOAD_B);
+    and_cpu.write_memory(3, 10);
+    and_cpu.write_memory(4, CPU::OP_AND);
+    and_cpu.write_memory(5, CPU::OP_HALT);
+
+    and_cpu.run();
+
+    if (and_cpu.register_a != 8 ||
+        and_cpu.register_b != 10 ||
+        !and_cpu.halted) {
+        std::cerr << "FAIL: Bitwise AND" << std::endl;
+        return 1;
+    }
+
+    std::cout << "PASS: Bitwise AND" << std::endl;
+    
+    // Test 32: Bitwise OR
+    CPU or_cpu;
+
+    or_cpu.write_memory(0, CPU::OP_LOAD);
+    or_cpu.write_memory(1, 12);
+    or_cpu.write_memory(2, CPU::OP_LOAD_B);
+    or_cpu.write_memory(3, 10);
+    or_cpu.write_memory(4, CPU::OP_OR);
+    or_cpu.write_memory(5, CPU::OP_HALT);
+
+    or_cpu.run();
+
+    if (or_cpu.register_a != 14 ||
+        or_cpu.register_b != 10 ||
+        !or_cpu.halted) {
+        std::cerr << "FAIL: Bitwise OR" << std::endl;
+        return 1;
+    }
+
+    std::cout << "PASS: Bitwise OR" << std::endl;
+
+
+    // Test 33: Bitwise XOR
+    CPU xor_cpu;
+
+    xor_cpu.write_memory(0, CPU::OP_LOAD);
+    xor_cpu.write_memory(1, 12);
+    xor_cpu.write_memory(2, CPU::OP_LOAD_B);
+    xor_cpu.write_memory(3, 10);
+    xor_cpu.write_memory(4, CPU::OP_XOR);
+    xor_cpu.write_memory(5, CPU::OP_HALT);
+
+    xor_cpu.run();
+
+    if (xor_cpu.register_a != 6 ||
+        xor_cpu.register_b != 10 ||
+        !xor_cpu.halted) {
+        std::cerr << "FAIL: Bitwise XOR" << std::endl;
+        return 1;
+    }
+
+    std::cout << "PASS: Bitwise XOR" << std::endl;
+
+
+    // Test 34: AND produces zero
+    CPU and_zero_cpu;
+
+    and_zero_cpu.write_memory(0, CPU::OP_LOAD);
+    and_zero_cpu.write_memory(1, 12);
+    and_zero_cpu.write_memory(2, CPU::OP_LOAD_B);
+    and_zero_cpu.write_memory(3, 3);
+    and_zero_cpu.write_memory(4, CPU::OP_AND);
+    and_zero_cpu.write_memory(5, CPU::OP_HALT);
+
+    and_zero_cpu.run();
+
+    if (and_zero_cpu.register_a != 0 ||
+        !and_zero_cpu.zero_flag ||
+        !and_zero_cpu.halted) {
+        std::cerr << "FAIL: AND produces zero" << std::endl;
+        return 1;
+    }
+
+    std::cout << "PASS: AND produces zero" << std::endl;
+
+    // Test 35: OR produces zero
+    CPU or_zero_cpu;
+
+    or_zero_cpu.write_memory(0, CPU::OP_LOAD);
+    or_zero_cpu.write_memory(1, 0);
+    or_zero_cpu.write_memory(2, CPU::OP_LOAD_B);
+    or_zero_cpu.write_memory(3, 0);
+    or_zero_cpu.write_memory(4, CPU::OP_OR);
+    or_zero_cpu.write_memory(5, CPU::OP_HALT);
+
+    or_zero_cpu.run();
+
+    if (or_zero_cpu.register_a != 0 ||
+        !or_zero_cpu.zero_flag ||
+        !or_zero_cpu.halted) {
+        std::cerr << "FAIL: OR produces zero" << std::endl;
+        return 1;
+    }
+
+    std::cout << "PASS: OR produces zero" << std::endl;
+
+
+    // Test 36: XOR produces zero
+    CPU xor_zero_cpu;
+
+    xor_zero_cpu.write_memory(0, CPU::OP_LOAD);
+    xor_zero_cpu.write_memory(1, 5);
+    xor_zero_cpu.write_memory(2, CPU::OP_LOAD_B);
+    xor_zero_cpu.write_memory(3, 5);
+    xor_zero_cpu.write_memory(4, CPU::OP_XOR);
+    xor_zero_cpu.write_memory(5, CPU::OP_HALT);
+
+    xor_zero_cpu.run();
+
+    if (xor_zero_cpu.register_a != 0 ||
+        !xor_zero_cpu.zero_flag ||
+        !xor_zero_cpu.halted) {
+        std::cerr << "FAIL: XOR produces zero" << std::endl;
+        return 1;
+    }
+
+    std::cout << "PASS: XOR produces zero" << std::endl;
+
+
+    
     std::cout << "All tests passed." << std::endl;
     return 0;
 }

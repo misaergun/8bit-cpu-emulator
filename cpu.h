@@ -28,6 +28,9 @@ public:
     static constexpr uint8_t OP_JE = 15;
     static constexpr uint8_t OP_JL = 16;
     static constexpr uint8_t OP_JG = 17;
+    static constexpr uint8_t OP_AND = 18;
+    static constexpr uint8_t OP_OR = 19;
+    static constexpr uint8_t OP_XOR = 20;
     static constexpr uint8_t OP_HALT = 255;
 
     uint8_t register_a = 0;
@@ -127,7 +130,23 @@ public:
                 subtract(register_b);
                 break;
             }
+            
+            case OP_AND: {
+                register_a = register_a & register_b;
+                zero_flag = (register_a == 0);
+                break;
+            }   
+            case OP_OR: {
+                register_a = register_a | register_b;
+                zero_flag = (register_a == 0);
+                break;
+            }
 
+            case OP_XOR: {
+                register_a = register_a ^ register_b;
+                zero_flag = (register_a == 0);
+                break;
+            }
 
             case OP_JMP: {
                 uint8_t address = fetch();
