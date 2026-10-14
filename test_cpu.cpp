@@ -699,6 +699,107 @@ int main() {
     std::cout << "PASS: XOR produces zero" << std::endl;
 
 
+    // Test 37: Bitwise NOT
+    CPU not_cpu;
+    not_cpu.write_memory(0, CPU::OP_LOAD);
+    not_cpu.write_memory(1, 12);
+    not_cpu.write_memory(2, CPU::OP_NOT);
+    not_cpu.write_memory(3, CPU::OP_HALT);
+    not_cpu.run();
+
+    if (not_cpu.register_a != 243 ||
+        not_cpu.zero_flag ||
+        !not_cpu.halted) {
+        std::cerr << "FAIL: Bitwise NOT" << std::endl;
+        return 1;
+    }
+    std::cout << "PASS: Bitwise NOT" << std::endl;
+
+
+    // Test 38: NOT produces zero
+    CPU not_zero_cpu;
+    not_zero_cpu.write_memory(0, CPU::OP_LOAD);
+    not_zero_cpu.write_memory(1, 255);
+    not_zero_cpu.write_memory(2, CPU::OP_NOT);
+    not_zero_cpu.write_memory(3, CPU::OP_HALT);
+    not_zero_cpu.run();
+
+    if (not_zero_cpu.register_a != 0 ||
+        !not_zero_cpu.zero_flag ||
+        !not_zero_cpu.halted) {
+        std::cerr << "FAIL: NOT produces zero" << std::endl;
+        return 1;
+    }
+    std::cout << "PASS: NOT produces zero" << std::endl;
+
+
+    // Test 39: Shift left
+    CPU shl_cpu;
+    shl_cpu.write_memory(0, CPU::OP_LOAD);
+    shl_cpu.write_memory(1, 12);
+    shl_cpu.write_memory(2, CPU::OP_SHL);
+    shl_cpu.write_memory(3, CPU::OP_HALT);
+    shl_cpu.run();
+
+    if (shl_cpu.register_a != 24 ||
+        shl_cpu.zero_flag ||
+        !shl_cpu.halted) {
+        std::cerr << "FAIL: Shift left" << std::endl;
+        return 1;
+    }
+    std::cout << "PASS: Shift left" << std::endl;
+
+
+    // Test 40: Shift left overflow
+    CPU shl_overflow_cpu;
+    shl_overflow_cpu.write_memory(0, CPU::OP_LOAD);
+    shl_overflow_cpu.write_memory(1, 128);
+    shl_overflow_cpu.write_memory(2, CPU::OP_SHL);
+    shl_overflow_cpu.write_memory(3, CPU::OP_HALT);
+    shl_overflow_cpu.run();
+
+    if (shl_overflow_cpu.register_a != 0 ||
+        !shl_overflow_cpu.zero_flag ||
+        !shl_overflow_cpu.halted) {
+        std::cerr << "FAIL: Shift left overflow" << std::endl;
+        return 1;
+    }
+    std::cout << "PASS: Shift left overflow" << std::endl;
+
+
+    // Test 41: Shift right
+    CPU shr_cpu;
+    shr_cpu.write_memory(0, CPU::OP_LOAD);
+    shr_cpu.write_memory(1, 12);
+    shr_cpu.write_memory(2, CPU::OP_SHR);
+    shr_cpu.write_memory(3, CPU::OP_HALT);
+    shr_cpu.run();
+
+    if (shr_cpu.register_a != 6 ||
+        shr_cpu.zero_flag ||
+        !shr_cpu.halted) {
+        std::cerr << "FAIL: Shift right" << std::endl;
+        return 1;
+    }
+    std::cout << "PASS: Shift right" << std::endl;
+
+
+    // Test 42: Shift right produces zero
+    CPU shr_zero_cpu;
+    shr_zero_cpu.write_memory(0, CPU::OP_LOAD);
+    shr_zero_cpu.write_memory(1, 1);
+    shr_zero_cpu.write_memory(2, CPU::OP_SHR);
+    shr_zero_cpu.write_memory(3, CPU::OP_HALT);
+    shr_zero_cpu.run();
+
+    if (shr_zero_cpu.register_a != 0 ||
+        !shr_zero_cpu.zero_flag ||
+        !shr_zero_cpu.halted) {
+        std::cerr << "FAIL: Shift right produces zero" << std::endl;
+        return 1;
+    }
+    std::cout << "PASS: Shift right produces zero" << std::endl;
+
     
     std::cout << "All tests passed." << std::endl;
     return 0;

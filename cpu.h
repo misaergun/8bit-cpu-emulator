@@ -31,6 +31,9 @@ public:
     static constexpr uint8_t OP_AND = 18;
     static constexpr uint8_t OP_OR = 19;
     static constexpr uint8_t OP_XOR = 20;
+    static constexpr uint8_t OP_NOT = 21;
+    static constexpr uint8_t OP_SHL = 22;
+    static constexpr uint8_t OP_SHR = 23;
     static constexpr uint8_t OP_HALT = 255;
 
     uint8_t register_a = 0;
@@ -144,6 +147,23 @@ public:
 
             case OP_XOR: {
                 register_a = register_a ^ register_b;
+                zero_flag = (register_a == 0);
+                break;
+            }
+            case OP_NOT: {
+                register_a = static_cast<uint8_t>(~register_a);
+                zero_flag = (register_a == 0);
+                break;
+            }
+
+            case OP_SHL: {
+                register_a = static_cast<uint8_t>(register_a << 1);
+                zero_flag = (register_a == 0);
+                break;
+            }
+
+            case OP_SHR: {
+                register_a = static_cast<uint8_t>(register_a >> 1);
                 zero_flag = (register_a == 0);
                 break;
             }

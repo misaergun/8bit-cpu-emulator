@@ -81,7 +81,29 @@ std::vector<uint8_t> xor_program(uint8_t first, uint8_t second) {
         CPU::OP_HALT
     };
 }
+std::vector<uint8_t> not_program(uint8_t value) {
+    return {
+        CPU::OP_LOAD, value,
+        CPU::OP_NOT,
+        CPU::OP_HALT
+    };
+}
 
+std::vector<uint8_t> shl_program(uint8_t value) {
+    return {
+        CPU::OP_LOAD, value,
+        CPU::OP_SHL,
+        CPU::OP_HALT
+    };
+}
+
+std::vector<uint8_t> shr_program(uint8_t value) {
+    return {
+        CPU::OP_LOAD, value,
+        CPU::OP_SHR,
+        CPU::OP_HALT
+    };
+}
 
 const char* instruction_name(uint8_t instruction) {
     switch (instruction) {
@@ -418,6 +440,9 @@ int main() {
             std::cout << "4 - Bitwise AND\n";
             std::cout << "5 - Bitwise OR\n";
             std::cout << "6 - Bitwise XOR\n";
+            std::cout << "7 - Bitwise NOT\n";
+            std::cout << "8 - Shift Left (SHL)\n";
+            std::cout << "9 - Shift Right (SHR)\n";
             std::cout << "Your choice: ";
 
             if (!(std::cin >> program_choice)) {
@@ -429,7 +454,7 @@ int main() {
                 continue;
             }
 
-            if (program_choice < 1 || program_choice > 6){
+            if (program_choice < 1 || program_choice > 9){
                 std::cerr << "Invalid program choice. Enter 1, 2, or 3.\n";
                 continue;
             }
@@ -514,6 +539,20 @@ int main() {
             case 6:
                 program = xor_program(a, b);
                 std::cout << "\nRunning Bitwise XOR program...\n";
+                break;
+            case 7:
+                program = not_program(a);
+                std::cout << "\nRunning Bitwise NOT program...\n";
+                break;
+
+            case 8:
+                program = shl_program(a);
+                std::cout << "\nRunning Shift Left (SHL) program...\n";
+                break;
+
+            case 9:
+                program = shr_program(a);
+                std::cout << "\nRunning Shift Right (SHR) program...\n";
                 break;
         }
 
