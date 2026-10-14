@@ -55,6 +55,34 @@ std::vector<uint8_t> subtraction_program(uint8_t first, uint8_t second) {
     };
 }
 
+std::vector<uint8_t> and_program(uint8_t first, uint8_t second) {
+    return {
+        CPU::OP_LOAD, first,
+        CPU::OP_LOAD_B, second,
+        CPU::OP_AND,
+        CPU::OP_HALT
+    };
+}
+
+std::vector<uint8_t> or_program(uint8_t first, uint8_t second) {
+    return {
+        CPU::OP_LOAD, first,
+        CPU::OP_LOAD_B, second,
+        CPU::OP_OR,
+        CPU::OP_HALT
+    };
+}
+
+std::vector<uint8_t> xor_program(uint8_t first, uint8_t second) {
+    return {
+        CPU::OP_LOAD, first,
+        CPU::OP_LOAD_B, second,
+        CPU::OP_XOR,
+        CPU::OP_HALT
+    };
+}
+
+
 const char* instruction_name(uint8_t instruction) {
     switch (instruction) {
         case CPU::OP_LOAD: return "LOAD";
@@ -75,6 +103,9 @@ const char* instruction_name(uint8_t instruction) {
         case CPU::OP_JL: return "JL";
         case CPU::OP_JG: return "JG";
         case CPU::OP_HALT: return "HALT";
+        case CPU::OP_AND: return "AND";
+        case CPU::OP_OR:  return "OR";
+        case CPU::OP_XOR: return "XOR";
         default: return "UNKNOWN";
     }
 }
@@ -384,6 +415,9 @@ int main() {
             std::cout << "1 - Comparison\n";
             std::cout << "2 - Addition\n";
             std::cout << "3 - Subtraction\n";
+            std::cout << "4 - Bitwise AND\n";
+            std::cout << "5 - Bitwise OR\n";
+            std::cout << "6 - Bitwise XOR\n";
             std::cout << "Your choice: ";
 
             if (!(std::cin >> program_choice)) {
@@ -395,7 +429,7 @@ int main() {
                 continue;
             }
 
-            if (program_choice < 1 || program_choice > 3) {
+            if (program_choice < 1 || program_choice > 6){
                 std::cerr << "Invalid program choice. Enter 1, 2, or 3.\n";
                 continue;
             }
@@ -466,6 +500,20 @@ int main() {
             case 3:
                 program = subtraction_program(a, b);
                 std::cout << "Subtraction program selected.\n";
+                break;
+            case 4:
+                program = and_program(a, b);
+                std::cout << "\nRunning Bitwise AND program...\n";
+                break;
+
+            case 5:
+                program = or_program(a, b);
+                std::cout << "\nRunning Bitwise OR program...\n";
+                break;
+
+            case 6:
+                program = xor_program(a, b);
+                std::cout << "\nRunning Bitwise XOR program...\n";
                 break;
         }
 
