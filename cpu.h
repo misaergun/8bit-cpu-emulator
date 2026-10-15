@@ -68,11 +68,12 @@ public:
 
     void write_memory(uint16_t address, uint8_t value)
     {
-        if (address >= MEMORY_SIZE)
+        if (address >= STACK_LIMIT)
         {
             throw std::out_of_range(
                 "Memory write address out of range");
         }
+
         memory[address] = value;
     }
 
@@ -110,11 +111,13 @@ public:
 
     uint8_t fetch()
     {
+        if (program_counter >= STACK_LIMIT) {
+            throw std::out_of_range(
+                "Program counter out of program memory range");
+        }
 
         uint8_t instruction = read_memory(program_counter);
-
         ++program_counter;
-
         return instruction;
     }
 

@@ -43,8 +43,8 @@ int main() {
 
     // Test 4: Missing parameter
     CPU incomplete_cpu;
-    incomplete_cpu.write_memory(255, CPU::OP_LOAD);
-    incomplete_cpu.program_counter = 255;
+    incomplete_cpu.write_memory(CPU::STACK_LIMIT - 1, CPU::OP_LOAD);
+    incomplete_cpu.program_counter = CPU::STACK_LIMIT - 1;
 
     try {
         incomplete_cpu.run();
