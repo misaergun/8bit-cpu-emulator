@@ -482,6 +482,11 @@ int main()
 
             if (!(std::cin >> first))
             {
+                if (std::cin.eof())
+                {
+                    return 1;
+                }
+
                 std::cerr << "Invalid number. Enter a value from 0 to 255.\n";
                 std::cin.clear();
                 std::cin.ignore(
@@ -505,6 +510,11 @@ int main()
 
             if (!(std::cin >> second))
             {
+                if (std::cin.eof())
+                {
+                    return 1;
+                }
+
                 std::cerr << "Invalid number. Enter a value from 0 to 255.\n";
                 std::cin.clear();
                 std::cin.ignore(
