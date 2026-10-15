@@ -402,7 +402,7 @@ void inspect_memory_menu(const CPU &cpu)
                 return;
             }
 
-            std::cerr << "Invalid byte count. Enter a positive integer.\n";
+            std::cerr << "Invalid byte count. Enter a value that keeps the range within memory.\n";
             std::cin.clear();
             std::cin.ignore(
                 std::numeric_limits<std::streamsize>::max(), '\n');
@@ -465,7 +465,7 @@ int main()
 
             if (program_choice < 1 || program_choice > 9)
             {
-                std::cerr << "Invalid program choice. Enter 1, 2, or 3.\n";
+                std::cerr << "Enter a number between 1 and 9.\n";
                 continue;
             }
 
