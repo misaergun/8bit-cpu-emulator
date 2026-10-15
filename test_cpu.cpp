@@ -6,9 +6,47 @@
 #include "instruction_names.h"
 #include <string>
 #include <vector>
+#include <cstdint>
+#include <cstdlib>
+
+void test_invalid_jump_target(
+    const char *test_name,
+    uint8_t opcode)
+{
+    CPU cpu;
+    cpu.write_memory(0, opcode);
+    cpu.write_memory(1, CPU::STACK_LIMIT);
+
+    try
+    {
+        cpu.step();
+        std::cerr << "FAIL: " << test_name
+                  << " accepted an invalid target" << std::endl;
+        std::exit(1);
+    }
+    catch (const std::runtime_error &error)
+    {
+        if (std::string(error.what()) !=
+            "Jump target address out of program memory")
+        {
+            std::cerr << "FAIL: Unexpected error: "
+                      << error.what() << std::endl;
+            std::exit(1);
+        }
+
+        std::cout << "PASS: " << test_name
+                  << " rejects invalid target" << std::endl;
+    }
+}
 
 int main()
 {
+    test_invalid_jump_target("JMP", CPU::OP_JMP);
+    test_invalid_jump_target("JZ", CPU::OP_JZ);
+    test_invalid_jump_target("JE", CPU::OP_JE);
+    test_invalid_jump_target("JL", CPU::OP_JL);
+    test_invalid_jump_target("JG", CPU::OP_JG);
+    
     // Test: Normal program
     CPU cpu;
     cpu.write_memory(0, CPU::OP_LOAD);

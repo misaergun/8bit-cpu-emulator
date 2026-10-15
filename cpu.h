@@ -8,6 +8,16 @@
 
 class CPU
 {
+private:
+    void validate_jump_target(uint8_t address)
+    {
+        if (address >= STACK_LIMIT)
+        {
+            throw std::runtime_error(
+                "Jump target address out of program memory");
+        }
+    }
+
 public:
     static constexpr uint16_t MEMORY_SIZE = 256;
     static constexpr uint16_t STACK_START = MEMORY_SIZE;
@@ -333,6 +343,7 @@ public:
         case OP_JMP:
         {
             uint8_t address = fetch();
+            validate_jump_target(address);
             program_counter = address;
             break;
         }
@@ -340,6 +351,8 @@ public:
         case OP_JZ:
         {
             uint8_t address = fetch();
+            validate_jump_target(address);
+
             if (register_a == 0)
             {
                 program_counter = address;
@@ -389,6 +402,7 @@ public:
         case OP_JE:
         {
             uint8_t address = fetch();
+            validate_jump_target(address);
             if (zero_flag)
             {
                 program_counter = address;
@@ -399,6 +413,7 @@ public:
         case OP_JL:
         {
             uint8_t address = fetch();
+            validate_jump_target(address);
             if (less_flag)
             {
                 program_counter = address;
@@ -409,6 +424,7 @@ public:
         case OP_JG:
         {
             uint8_t address = fetch();
+            validate_jump_target(address);
             if (greater_flag)
             {
                 program_counter = address;
