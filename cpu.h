@@ -245,9 +245,13 @@ public:
 
         case OP_POP:
         {
-            if (stack_size == 0 || stack_pointer >= MEMORY_SIZE) {
-            throw std::runtime_error("Stack underflow");
-        }
+            if (stack_size == 0 ||
+                stack_pointer >= MEMORY_SIZE ||
+                (!return_addresses.empty() &&
+                stack_pointer >= return_addresses.back() &&
+                stack_pointer < return_addresses.back() + 2)) {
+                throw std::runtime_error("Stack underflow");
+            }
 
             register_a = read_memory(stack_pointer);
             ++stack_pointer;

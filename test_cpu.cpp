@@ -988,6 +988,31 @@ int main() {
         std::cout << "PASS: RET after PUSH" << std::endl;
     }
 
+    // Test 51: POP must not consume a return address
+    CPU pop_return_address_cpu;
+
+    pop_return_address_cpu.write_memory(0, CPU::OP_CALL);
+    pop_return_address_cpu.write_memory(1, 6);
+    pop_return_address_cpu.write_memory(2, CPU::OP_HALT);
+
+    pop_return_address_cpu.write_memory(6, CPU::OP_POP);
+    pop_return_address_cpu.write_memory(7, CPU::OP_RET);
+
+    try {
+        pop_return_address_cpu.run();
+        std::cerr << "FAIL: POP consumed return address" << std::endl;
+        return 1;
+    } catch (const std::runtime_error& error) {
+        if (std::string(error.what()) != "Stack underflow") {
+            std::cerr << "FAIL: Unexpected error: "
+                      << error.what() << std::endl;
+            return 1;
+        }
+
+        std::cout << "PASS: POP cannot consume return address"
+                  << std::endl;
+    }
+
 
     
     std::cout << "All tests passed." << std::endl;
