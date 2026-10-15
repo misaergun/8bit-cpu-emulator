@@ -252,6 +252,46 @@ int main() {
 
     std::cout << "PASS: Store register B" << std::endl;
 
+    
+    // Test 55: STORE_B rejects stack memory
+    CPU store_b_stack_cpu;
+    store_b_stack_cpu.write_memory(0, CPU::OP_LOAD_B);
+    store_b_stack_cpu.write_memory(1, 77);
+    store_b_stack_cpu.write_memory(2, CPU::OP_STORE_B);
+    store_b_stack_cpu.write_memory(3, CPU::STACK_LIMIT);
+    store_b_stack_cpu.write_memory(4, CPU::OP_HALT);
+
+    try
+    {
+        store_b_stack_cpu.run();
+        std::cerr << "FAIL: STORE_B writes to stack memory" << std::endl;
+        return 1;
+    }
+    catch (const std::runtime_error&)
+    {
+        std::cout << "PASS: STORE_B rejects stack memory" << std::endl;
+    }
+
+    // Test 56: STORE rejects stack memory
+    CPU store_stack_cpu;
+    store_stack_cpu.write_memory(0, CPU::OP_LOAD);
+    store_stack_cpu.write_memory(1, 42);
+    store_stack_cpu.write_memory(2, CPU::OP_STORE);
+    store_stack_cpu.write_memory(3, CPU::STACK_LIMIT);
+    store_stack_cpu.write_memory(4, CPU::OP_HALT);
+
+    try
+    {
+        store_stack_cpu.run();
+        std::cerr << "FAIL: STORE writes to stack memory" << std::endl;
+        return 1;
+    }
+    catch (const std::runtime_error&)
+    {
+        std::cout << "PASS: STORE rejects stack memory" << std::endl;
+    }
+
+
     // Test 15: Reset register B
     CPU reset_b_cpu;
     reset_b_cpu.register_b = 99;
