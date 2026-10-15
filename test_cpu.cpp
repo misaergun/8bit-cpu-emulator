@@ -1121,6 +1121,45 @@ int main()
 
         std::cout << "PASS: CALL stack overflow" << std::endl;
     }
+    // Test: CALL rejects stack target without changing stack
+    CPU invalid_call_target_cpu;
+    invalid_call_target_cpu.write_memory(0, CPU::OP_CALL);
+    invalid_call_target_cpu.write_memory(1, CPU::STACK_LIMIT);
+
+    const auto initial_stack_pointer = invalid_call_target_cpu.stack_pointer;
+    const auto initial_stack_size = invalid_call_target_cpu.stack_size;
+
+    try
+    {
+        invalid_call_target_cpu.step();
+
+        std::cerr << "FAIL: CALL accepted stack target" << std::endl;
+        return 1;
+    }
+    catch (const std::runtime_error &error)
+    {
+        if (std::string(error.what()) !=
+            "CALL target address out of program memory")
+        {
+            std::cerr << "FAIL: Unexpected error: "
+                      << error.what() << std::endl;
+            return 1;
+        }
+
+        if (invalid_call_target_cpu.stack_pointer != initial_stack_pointer ||
+            invalid_call_target_cpu.stack_size != initial_stack_size ||
+            !invalid_call_target_cpu.return_addresses.empty())
+        {
+            std::cerr << "FAIL: Invalid CALL target changed stack state"
+                      << std::endl;
+            return 1;
+        }
+
+        std::cout
+            << "PASS: CALL rejects stack target without changing stack"
+            << std::endl;
+    }
+
     // Test: RET without CALL must fail
     CPU ret_without_call_cpu;
 

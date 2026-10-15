@@ -274,6 +274,12 @@ public:
         {
             uint8_t address = fetch();
 
+            if (address >= STACK_LIMIT)
+            {
+                throw std::runtime_error(
+                    "CALL target address out of program memory");
+            }
+
             if (stack_pointer < STACK_LIMIT + 2 ||
                 stack_size > (MEMORY_SIZE - STACK_LIMIT) - 2)
             {
