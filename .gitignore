@@ -1,0 +1,10 @@
+
+# Compiled binaries
+cpu_emulator
+test_cpu
+
+# macOS
+.DS_Store
+
+# Editor settings
+.vscode/
