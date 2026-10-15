@@ -453,6 +453,7 @@ int main()
     je_equal_cpu.run();
 
     if (je_equal_cpu.register_a != 10 ||
+        je_equal_cpu.program_counter != 7 ||
         !je_equal_cpu.halted)
     {
         std::cerr << "FAIL: JE when registers are equal" << std::endl;
@@ -475,6 +476,7 @@ int main()
     je_different_cpu.run();
 
     if (je_different_cpu.register_a != 99 ||
+        je_different_cpu.program_counter != 6 ||
         !je_different_cpu.halted)
     {
         std::cerr << "FAIL: JE when registers differ" << std::endl;
@@ -531,7 +533,9 @@ int main()
     jl_cpu.write_memory(6, CPU::OP_HALT);
     jl_cpu.run();
 
-    if (jl_cpu.register_a != 3 || !jl_cpu.halted)
+    if (jl_cpu.register_a != 3 ||
+        jl_cpu.program_counter != 7 ||
+        !jl_cpu.halted)
     {
         std::cerr << "FAIL: JL when A is less than B" << std::endl;
         return 1;
@@ -551,7 +555,9 @@ int main()
     jg_cpu.write_memory(6, CPU::OP_HALT);
     jg_cpu.run();
 
-    if (jg_cpu.register_a != 8 || !jg_cpu.halted)
+    if (jg_cpu.register_a != 8 ||
+        jg_cpu.program_counter != 7 ||
+        !jg_cpu.halted)
     {
         std::cerr << "FAIL: JG when A is greater than B" << std::endl;
         return 1;

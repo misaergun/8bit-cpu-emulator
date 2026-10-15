@@ -7,7 +7,6 @@
 #include "program_loader.h"
 #include "instruction_names.h"
 
-
 std::vector<uint8_t> comparison_program(uint8_t first, uint8_t second)
 {
     return {
