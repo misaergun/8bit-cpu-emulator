@@ -541,6 +541,31 @@ int main() {
     std::cout << "PASS: Subtraction program (12 - 4)" << std::endl;
 
 
+    // Test: ADD sets zero_flag when the result wraps to zero
+    CPU add_zero_test;
+    add_zero_test.register_a = 255;
+    add_zero_test.add(1);
+
+    if (add_zero_test.register_a != 0 || !add_zero_test.zero_flag) {
+        std::cerr << "FAIL: ADD zero flag after overflow" << std::endl;
+        return 1;
+    }
+
+    std::cout << "PASS: ADD zero flag after overflow" << std::endl;
+
+    // Test: SUB sets zero_flag when the result is zero
+    CPU sub_zero_test;
+    sub_zero_test.register_a = 5;
+    sub_zero_test.subtract(5);
+
+    if (sub_zero_test.register_a != 0 || !sub_zero_test.zero_flag) {
+        std::cerr << "FAIL: SUB zero flag when result is zero" << std::endl;
+        return 1;
+    }
+
+    std::cout << "PASS: SUB zero flag when result is zero" << std::endl;
+
+
     // Test 29: Equality comparison program (7 == 7)
     CPU equal_program_test;
     const uint8_t equal_program[] = {

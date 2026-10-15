@@ -58,12 +58,14 @@ public:
     {
         register_a = static_cast<uint8_t>(
             register_a + value);
+        zero_flag = (register_a == 0);
     }
 
     void subtract(uint8_t value)
     {
         register_a = static_cast<uint8_t>(
             register_a - value);
+        zero_flag = (register_a == 0);
     }
 
     void write_memory(uint16_t address, uint8_t value)
