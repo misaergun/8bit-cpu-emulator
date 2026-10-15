@@ -553,6 +553,25 @@ int main() {
 
     std::cout << "PASS: ADD zero flag after overflow" << std::endl;
 
+        // Test: ADD preserves comparison flags
+    CPU add_flags_test;
+    add_flags_test.register_a = 2;
+    add_flags_test.register_b = 5;
+    add_flags_test.write_memory(0, CPU::OP_CMP);
+    add_flags_test.write_memory(1, CPU::OP_LOAD);
+    add_flags_test.write_memory(2, 10);
+    add_flags_test.write_memory(3, CPU::OP_ADD);
+    add_flags_test.write_memory(4, 1);
+    add_flags_test.write_memory(5, CPU::OP_HALT);
+    add_flags_test.run();
+
+    if (!add_flags_test.less_flag || add_flags_test.greater_flag) {
+        std::cerr << "FAIL: ADD preserves comparison flags" << std::endl;
+        return 1;
+    }
+
+    std::cout << "PASS: ADD preserves comparison flags" << std::endl;
+
     // Test: SUB sets zero_flag when the result is zero
     CPU sub_zero_test;
     sub_zero_test.register_a = 5;
