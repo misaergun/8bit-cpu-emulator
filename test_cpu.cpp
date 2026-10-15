@@ -168,6 +168,9 @@ int main() {
         reset_cpu.zero_flag ||
         reset_cpu.less_flag ||
         reset_cpu.greater_flag ||
+        reset_cpu.stack_pointer != CPU::STACK_START ||
+        reset_cpu.stack_size != 0 ||
+        !reset_cpu.return_addresses.empty() ||
         reset_cpu.read_memory(0) != 0 ||
         reset_cpu.read_memory(1) != 0 ||
         reset_cpu.read_memory(2) != 0 ||
