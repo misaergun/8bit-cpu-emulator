@@ -1132,21 +1132,38 @@ int main() {
         }
     }
 
+    
     // Test 57: Instruction names
-    if (std::string(instruction_name(CPU::OP_NOT)) != "NOT" ||
-        std::string(instruction_name(CPU::OP_SHL)) != "SHL" ||
-        std::string(instruction_name(CPU::OP_SHR)) != "SHR" ||
-        std::string(instruction_name(CPU::OP_PUSH)) != "PUSH" ||
-        std::string(instruction_name(CPU::OP_POP)) != "POP" ||
-        std::string(instruction_name(CPU::OP_CALL)) != "CALL" ||
-        std::string(instruction_name(CPU::OP_RET)) != "RET" ||
-        std::string(instruction_name(100)) != "UNKNOWN")
+    const uint8_t opcodes[] = {
+        CPU::OP_LOAD, CPU::OP_ADD, CPU::OP_SUB,
+        CPU::OP_JMP, CPU::OP_JZ, CPU::OP_LOAD_MEM,
+        CPU::OP_STORE, CPU::OP_LOAD_B, CPU::OP_STORE_B,
+        CPU::OP_MOV_A_B, CPU::OP_MOV_B_A,
+        CPU::OP_ADD_B, CPU::OP_SUB_B, CPU::OP_CMP,
+        CPU::OP_JE, CPU::OP_JL, CPU::OP_JG,
+        CPU::OP_AND, CPU::OP_OR, CPU::OP_XOR,
+        CPU::OP_NOT, CPU::OP_SHL, CPU::OP_SHR,
+        CPU::OP_PUSH, CPU::OP_POP, CPU::OP_CALL,
+        CPU::OP_RET, CPU::OP_HALT
+    };
+
+    for (uint8_t opcode : opcodes)
     {
-        std::cerr << "FAIL: Instruction names" << std::endl;
+        if (std::string(instruction_name(opcode)) == "UNKNOWN")
+        {
+            std::cerr << "FAIL: Missing instruction name for opcode "
+                      << static_cast<int>(opcode) << std::endl;
+            return 1;
+        }
+    }
+
+    if (std::string(instruction_name(100)) != "UNKNOWN")
+    {
+        std::cerr << "FAIL: Unknown instruction name" << std::endl;
         return 1;
     }
 
-    std::cout << "PASS: Instruction names" << std::endl;
+    std::cout << "PASS: All instruction names" << std::endl;
 
 
     std::cout << "All tests passed." << std::endl;
