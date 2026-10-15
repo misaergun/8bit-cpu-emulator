@@ -111,7 +111,8 @@ public:
 
     uint8_t fetch()
     {
-        if (program_counter >= STACK_LIMIT) {
+        if (program_counter >= STACK_LIMIT)
+        {
             throw std::out_of_range(
                 "Program counter out of program memory range");
         }
@@ -233,11 +234,11 @@ public:
             break;
         }
 
-        
         case OP_PUSH:
         {
             if (stack_pointer <= STACK_LIMIT ||
-                stack_size >= MEMORY_SIZE - STACK_LIMIT) {
+                stack_size >= MEMORY_SIZE - STACK_LIMIT)
+            {
                 throw std::runtime_error("Stack overflow");
             }
 
@@ -248,14 +249,14 @@ public:
             break;
         }
 
-        
         case OP_POP:
         {
             if (stack_size == 0 ||
                 stack_pointer >= MEMORY_SIZE ||
                 (!return_addresses.empty() &&
                  stack_pointer >= return_addresses.back() &&
-                 stack_pointer < return_addresses.back() + 2)) {
+                 stack_pointer < return_addresses.back() + 2))
+            {
                 throw std::runtime_error("Stack underflow");
             }
 
@@ -267,13 +268,13 @@ public:
             break;
         }
 
-        
         case OP_CALL:
         {
             uint8_t address = fetch();
 
             if (stack_pointer < STACK_LIMIT + 2 ||
-                stack_size > (MEMORY_SIZE - STACK_LIMIT) - 2) {
+                stack_size > (MEMORY_SIZE - STACK_LIMIT) - 2)
+            {
                 throw std::runtime_error("Stack overflow");
             }
 
@@ -284,28 +285,27 @@ public:
 
             write_stack_memory(
                 stack_pointer,
-                static_cast<uint8_t>(program_counter & 0xFF)
-            );
+                static_cast<uint8_t>(program_counter & 0xFF));
 
             write_stack_memory(
                 stack_pointer + 1,
-                static_cast<uint8_t>((program_counter >> 8) & 0xFF)
-            );
+                static_cast<uint8_t>((program_counter >> 8) & 0xFF));
 
             program_counter = address;
             break;
         }
 
-        
         case OP_RET:
         {
             if (stack_size < 2 ||
-                stack_pointer > MEMORY_SIZE - 2) {
+                stack_pointer > MEMORY_SIZE - 2)
+            {
                 throw std::runtime_error("Stack underflow");
             }
 
             if (return_addresses.empty() ||
-                return_addresses.back() != stack_pointer) {
+                return_addresses.back() != stack_pointer)
+            {
                 throw std::runtime_error("Stack underflow");
             }
 
@@ -313,8 +313,7 @@ public:
             uint16_t high_byte = read_memory(stack_pointer + 1);
 
             program_counter = static_cast<uint16_t>(
-                low_byte | (high_byte << 8)
-            );
+                low_byte | (high_byte << 8));
 
             return_addresses.pop_back();
             stack_pointer += 2;
@@ -415,8 +414,7 @@ public:
         default:
             throw std::runtime_error(
                 "Unknown instruction: " +
-                std::to_string(instruction)
-            );
+                std::to_string(instruction));
         }
     }
 
@@ -444,8 +442,7 @@ public:
             if (steps >= MAX_STEPS)
             {
                 throw std::runtime_error(
-                    "Maximum instruction limit reached"
-                );
+                    "Maximum instruction limit reached");
             }
             step();
             ++steps;
