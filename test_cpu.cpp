@@ -3,6 +3,7 @@
 #include <stdexcept>
 #include "cpu.h"
 #include "program_loader.h"
+#include "instruction_names.h"
 #include <string>
 #include <vector>
 
@@ -1130,6 +1131,23 @@ int main() {
             return 1;
         }
     }
+
+    // Test 57: Instruction names
+    if (std::string(instruction_name(CPU::OP_NOT)) != "NOT" ||
+        std::string(instruction_name(CPU::OP_SHL)) != "SHL" ||
+        std::string(instruction_name(CPU::OP_SHR)) != "SHR" ||
+        std::string(instruction_name(CPU::OP_PUSH)) != "PUSH" ||
+        std::string(instruction_name(CPU::OP_POP)) != "POP" ||
+        std::string(instruction_name(CPU::OP_CALL)) != "CALL" ||
+        std::string(instruction_name(CPU::OP_RET)) != "RET" ||
+        std::string(instruction_name(100)) != "UNKNOWN")
+    {
+        std::cerr << "FAIL: Instruction names" << std::endl;
+        return 1;
+    }
+
+    std::cout << "PASS: Instruction names" << std::endl;
+
 
     std::cout << "All tests passed." << std::endl;
     return 0;
