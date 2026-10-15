@@ -1013,6 +1013,36 @@ int main() {
                   << std::endl;
     }
 
+    // Test 52: PUSH and POP inside a subroutine preserve return address
+    CPU push_pop_subroutine_cpu;
+
+    push_pop_subroutine_cpu.write_memory(0, CPU::OP_CALL);
+    push_pop_subroutine_cpu.write_memory(1, 6);
+    push_pop_subroutine_cpu.write_memory(2, CPU::OP_HALT);
+
+    push_pop_subroutine_cpu.write_memory(6, CPU::OP_LOAD);
+    push_pop_subroutine_cpu.write_memory(7, 42);
+    push_pop_subroutine_cpu.write_memory(8, CPU::OP_PUSH);
+    push_pop_subroutine_cpu.write_memory(9, CPU::OP_LOAD);
+    push_pop_subroutine_cpu.write_memory(10, 99);
+    push_pop_subroutine_cpu.write_memory(11, CPU::OP_POP);
+    push_pop_subroutine_cpu.write_memory(12, CPU::OP_RET);
+
+    push_pop_subroutine_cpu.run();
+
+    if (push_pop_subroutine_cpu.register_a != 42 ||
+        push_pop_subroutine_cpu.program_counter != 3 ||
+        push_pop_subroutine_cpu.stack_pointer != CPU::MEMORY_SIZE ||
+        !push_pop_subroutine_cpu.halted) {
+        std::cerr << "FAIL: PUSH and POP inside subroutine"
+                  << std::endl;
+        return 1;
+    }
+
+    std::cout << "PASS: PUSH and POP inside subroutine"
+              << std::endl;
+
+
 
     
     std::cout << "All tests passed." << std::endl;
