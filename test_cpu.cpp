@@ -7,8 +7,9 @@
 #include <string>
 #include <vector>
 
-int main() {
-    // Test 1: Normal program
+int main()
+{
+    // Test: Normal program
     CPU cpu;
     cpu.write_memory(0, CPU::OP_LOAD);
     cpu.write_memory(1, 5);
@@ -17,47 +18,86 @@ int main() {
     cpu.write_memory(4, CPU::OP_HALT);
     cpu.run();
 
-    if (cpu.register_a != 8) {
+    if (cpu.register_a != 8)
+    {
         std::cerr << "FAIL: Normal program" << std::endl;
         return 1;
     }
     std::cout << "PASS: Normal program" << std::endl;
 
-    // Test 2: Memory boundary
-    try {
+    // Test: HALT advances the program counter
+    CPU halt_pc_test;
+    halt_pc_test.write_memory(0, CPU::OP_HALT);
+    halt_pc_test.run();
+
+    if (halt_pc_test.program_counter != 1 || !halt_pc_test.halted)
+    {
+        std::cerr << "FAIL: HALT program counter" << std::endl;
+        return 1;
+    }
+
+    std::cout << "PASS: HALT program counter" << std::endl;
+
+    // Test: JMP sets the program counter to the target address
+    CPU jump_pc_test;
+    jump_pc_test.write_memory(0, CPU::OP_JMP);
+    jump_pc_test.write_memory(1, 4);
+    jump_pc_test.write_memory(4, CPU::OP_HALT);
+
+    jump_pc_test.step();
+
+    if (jump_pc_test.program_counter != 4)
+    {
+        std::cerr << "FAIL: JMP program counter" << std::endl;
+        return 1;
+    }
+
+    std::cout << "PASS: JMP program counter" << std::endl;
+
+    // Test: Memory boundary
+    try
+    {
         cpu.read_memory(256);
         std::cerr << "FAIL: Memory boundary check" << std::endl;
         return 1;
-    } catch (const std::out_of_range&) {
+    }
+    catch (const std::out_of_range &)
+    {
         std::cout << "PASS: Memory boundary check" << std::endl;
     }
 
-    // Test 3: Unknown instruction
+    // Test: Unknown instruction
     CPU invalid_cpu;
     invalid_cpu.write_memory(0, 99);
 
-    try {
+    try
+    {
         invalid_cpu.run();
         std::cerr << "FAIL: Unknown instruction" << std::endl;
         return 1;
-    } catch (const std::runtime_error&) {
+    }
+    catch (const std::runtime_error &)
+    {
         std::cout << "PASS: Unknown instruction" << std::endl;
     }
 
-    // Test 4: Missing parameter
+    // Test: Missing parameter
     CPU incomplete_cpu;
     incomplete_cpu.write_memory(CPU::STACK_LIMIT - 1, CPU::OP_LOAD);
     incomplete_cpu.program_counter = CPU::STACK_LIMIT - 1;
 
-    try {
+    try
+    {
         incomplete_cpu.run();
         std::cerr << "FAIL: Missing parameter" << std::endl;
         return 1;
-    } catch (const std::out_of_range&) {
+    }
+    catch (const std::out_of_range &)
+    {
         std::cout << "PASS: Missing parameter" << std::endl;
     }
 
-    // Test 5: Unconditional jump
+    // Test: Unconditional jump
     CPU jump_cpu;
     jump_cpu.write_memory(0, CPU::OP_JMP);
     jump_cpu.write_memory(1, 4);
@@ -66,13 +106,14 @@ int main() {
     jump_cpu.write_memory(4, CPU::OP_HALT);
     jump_cpu.run();
 
-    if (jump_cpu.register_a != 0 || !jump_cpu.halted) {
+    if (jump_cpu.register_a != 0 || !jump_cpu.halted)
+    {
         std::cerr << "FAIL: Unconditional jump" << std::endl;
         return 1;
     }
     std::cout << "PASS: Unconditional jump" << std::endl;
 
-    // Test 6: Jump when register A is zero
+    // Test: Jump when register A is zero
     CPU zero_cpu;
     zero_cpu.write_memory(0, CPU::OP_LOAD);
     zero_cpu.write_memory(1, 0);
@@ -83,13 +124,16 @@ int main() {
     zero_cpu.write_memory(6, CPU::OP_HALT);
     zero_cpu.run();
 
-    if (zero_cpu.register_a != 0 || !zero_cpu.halted) {
+    if (zero_cpu.register_a != 0 ||
+        zero_cpu.program_counter != 7 ||
+        !zero_cpu.halted)
+    {
         std::cerr << "FAIL: JZ when register A is zero" << std::endl;
         return 1;
     }
     std::cout << "PASS: JZ when register A is zero" << std::endl;
 
-    // Test 7: Do not jump when register A is nonzero
+    // Test: Do not jump when register A is nonzero
     CPU nonzero_cpu;
     nonzero_cpu.write_memory(0, CPU::OP_LOAD);
     nonzero_cpu.write_memory(1, 5);
@@ -100,14 +144,16 @@ int main() {
     nonzero_cpu.write_memory(6, CPU::OP_HALT);
     nonzero_cpu.run();
 
-    if (nonzero_cpu.register_a != 99 || !nonzero_cpu.halted) {
+    if (nonzero_cpu.register_a != 99 ||
+        nonzero_cpu.program_counter != 7 ||
+        !nonzero_cpu.halted)
+    {
         std::cerr << "FAIL: JZ when register A is nonzero" << std::endl;
         return 1;
     }
     std::cout << "PASS: JZ when register A is nonzero" << std::endl;
 
-    
-    // Test 8: Loop until register A reaches zero
+    // Test: Loop until register A reaches zero
     CPU loop_cpu;
     loop_cpu.write_memory(0, CPU::OP_LOAD);
     loop_cpu.write_memory(1, 3);
@@ -121,26 +167,30 @@ int main() {
 
     loop_cpu.run();
 
-    if (loop_cpu.register_a != 0 || !loop_cpu.halted) {
+    if (loop_cpu.register_a != 0 || !loop_cpu.halted)
+    {
         std::cerr << "FAIL: Loop until zero" << std::endl;
         return 1;
     }
 
     std::cout << "PASS: Loop until zero" << std::endl;
 
-
-    // Test 9: Detect an infinite loop
+    // Test: Detect an infinite loop
     CPU infinite_cpu;
     infinite_cpu.write_memory(0, CPU::OP_JMP);
     infinite_cpu.write_memory(1, 0);
 
-    try {
+    try
+    {
         infinite_cpu.run();
         std::cerr << "FAIL: Infinite loop detection" << std::endl;
         return 1;
-    } catch (const std::runtime_error& error) {
+    }
+    catch (const std::runtime_error &error)
+    {
         if (std::string(error.what()) !=
-            "Maximum instruction limit reached") {
+            "Maximum instruction limit reached")
+        {
             std::cerr << "FAIL: Unexpected error: "
                       << error.what() << std::endl;
             return 1;
@@ -149,8 +199,7 @@ int main() {
         std::cout << "PASS: Infinite loop detection" << std::endl;
     }
 
-    
-    // Test 10: Reset CPU state
+    // Test: Reset CPU state
     CPU reset_cpu;
 
     reset_cpu.write_memory(0, CPU::OP_LOAD);
@@ -179,16 +228,15 @@ int main() {
         reset_cpu.read_memory(2) != 0 ||
         reset_cpu.read_memory(3) != 0 ||
         reset_cpu.read_memory(4) != 0 ||
-        reset_cpu.read_memory(5) != 0) {
+        reset_cpu.read_memory(5) != 0)
+    {
         std::cerr << "FAIL: Reset CPU state" << std::endl;
         return 1;
     }
 
     std::cout << "PASS: Reset CPU state" << std::endl;
 
-
-
-    // Test 11: Load value from memory
+    // Test: Load value from memory
     CPU load_mem_cpu;
     load_mem_cpu.write_memory(20, 42);
     load_mem_cpu.write_memory(0, CPU::OP_LOAD_MEM);
@@ -197,15 +245,15 @@ int main() {
 
     load_mem_cpu.run();
 
-    if (load_mem_cpu.register_a != 42) {
+    if (load_mem_cpu.register_a != 42)
+    {
         std::cerr << "FAIL: Load from memory" << std::endl;
         return 1;
     }
 
     std::cout << "PASS: Load from memory" << std::endl;
 
-
-    // Test 12: Store register A in memory
+    // Test: Store register A in memory
     CPU store_cpu;
     store_cpu.write_memory(0, CPU::OP_LOAD);
     store_cpu.write_memory(1, 73);
@@ -215,29 +263,30 @@ int main() {
 
     store_cpu.run();
 
-    if (store_cpu.read_memory(30) != 73) {
+    if (store_cpu.read_memory(30) != 73)
+    {
         std::cerr << "FAIL: Store to memory" << std::endl;
         return 1;
     }
 
     std::cout << "PASS: Store to memory" << std::endl;
 
-
-    // Test 13: Load a value into register B
+    // Test: Load a value into register B
     CPU load_b_cpu;
     load_b_cpu.write_memory(0, CPU::OP_LOAD_B);
     load_b_cpu.write_memory(1, 55);
     load_b_cpu.write_memory(2, CPU::OP_HALT);
     load_b_cpu.run();
 
-    if (load_b_cpu.register_b != 55) {
+    if (load_b_cpu.register_b != 55)
+    {
         std::cerr << "FAIL: Load register B" << std::endl;
         return 1;
     }
 
     std::cout << "PASS: Load register B" << std::endl;
 
-    // Test 14: Store register B in memory
+    // Test: Store register B in memory
     CPU store_b_cpu;
     store_b_cpu.write_memory(0, CPU::OP_LOAD_B);
     store_b_cpu.write_memory(1, 77);
@@ -246,15 +295,15 @@ int main() {
     store_b_cpu.write_memory(4, CPU::OP_HALT);
     store_b_cpu.run();
 
-    if (store_b_cpu.read_memory(30) != 77) {
+    if (store_b_cpu.read_memory(30) != 77)
+    {
         std::cerr << "FAIL: Store register B" << std::endl;
         return 1;
     }
 
     std::cout << "PASS: Store register B" << std::endl;
 
-    
-    // Test 55: STORE_B rejects stack memory
+    // Test: STORE_B rejects stack memory
     CPU store_b_stack_cpu;
     store_b_stack_cpu.write_memory(0, CPU::OP_LOAD_B);
     store_b_stack_cpu.write_memory(1, 77);
@@ -268,12 +317,12 @@ int main() {
         std::cerr << "FAIL: STORE_B writes to stack memory" << std::endl;
         return 1;
     }
-    catch (const std::runtime_error&)
+    catch (const std::runtime_error &)
     {
         std::cout << "PASS: STORE_B rejects stack memory" << std::endl;
     }
 
-    // Test 56: STORE rejects stack memory
+    // Test: STORE rejects stack memory
     CPU store_stack_cpu;
     store_stack_cpu.write_memory(0, CPU::OP_LOAD);
     store_stack_cpu.write_memory(1, 42);
@@ -287,26 +336,25 @@ int main() {
         std::cerr << "FAIL: STORE writes to stack memory" << std::endl;
         return 1;
     }
-    catch (const std::runtime_error&)
+    catch (const std::runtime_error &)
     {
         std::cout << "PASS: STORE rejects stack memory" << std::endl;
     }
 
-
-    // Test 15: Reset register B
+    // Test: Reset register B
     CPU reset_b_cpu;
     reset_b_cpu.register_b = 99;
     reset_b_cpu.reset();
 
-    if (reset_b_cpu.register_b != 0) {
+    if (reset_b_cpu.register_b != 0)
+    {
         std::cerr << "FAIL: Reset register B" << std::endl;
         return 1;
     }
 
     std::cout << "PASS: Reset register B" << std::endl;
 
-
-    // Test 16: Copy register B to register A
+    // Test: Copy register B to register A
     CPU mov_a_b_cpu;
     mov_a_b_cpu.register_a = 10;
     mov_a_b_cpu.register_b = 5;
@@ -315,14 +363,15 @@ int main() {
     mov_a_b_cpu.run();
 
     if (mov_a_b_cpu.register_a != 5 ||
-        mov_a_b_cpu.register_b != 5) {
+        mov_a_b_cpu.register_b != 5)
+    {
         std::cerr << "FAIL: Move B to A" << std::endl;
         return 1;
     }
 
     std::cout << "PASS: Move B to A" << std::endl;
 
-    // Test 17: Copy register A to register B
+    // Test: Copy register A to register B
     CPU mov_b_a_cpu;
     mov_b_a_cpu.register_a = 25;
     mov_b_a_cpu.register_b = 7;
@@ -331,14 +380,15 @@ int main() {
     mov_b_a_cpu.run();
 
     if (mov_b_a_cpu.register_a != 25 ||
-        mov_b_a_cpu.register_b != 25) {
+        mov_b_a_cpu.register_b != 25)
+    {
         std::cerr << "FAIL: Move A to B" << std::endl;
         return 1;
     }
 
     std::cout << "PASS: Move A to B" << std::endl;
 
-    // Test 18: Add register B to register A
+    // Test: Add register B to register A
     CPU add_b_cpu;
     add_b_cpu.register_a = 10;
     add_b_cpu.register_b = 5;
@@ -347,14 +397,15 @@ int main() {
     add_b_cpu.run();
 
     if (add_b_cpu.register_a != 15 ||
-        add_b_cpu.register_b != 5) {
+        add_b_cpu.register_b != 5)
+    {
         std::cerr << "FAIL: Add register B to A" << std::endl;
         return 1;
     }
 
     std::cout << "PASS: Add register B to A" << std::endl;
 
-    // Test 19: Subtract register B from register A
+    // Test: Subtract register B from register A
     CPU sub_b_cpu;
     sub_b_cpu.register_a = 10;
     sub_b_cpu.register_b = 3;
@@ -363,14 +414,15 @@ int main() {
     sub_b_cpu.run();
 
     if (sub_b_cpu.register_a != 7 ||
-        sub_b_cpu.register_b != 3) {
+        sub_b_cpu.register_b != 3)
+    {
         std::cerr << "FAIL: Subtract register B from A" << std::endl;
         return 1;
     }
 
     std::cout << "PASS: Subtract register B from A" << std::endl;
 
-    // Test 20: Compare equal registers
+    // Test: Compare equal registers
     CPU cmp_cpu;
     cmp_cpu.register_a = 10;
     cmp_cpu.register_b = 10;
@@ -380,14 +432,15 @@ int main() {
 
     if (!cmp_cpu.zero_flag ||
         cmp_cpu.register_a != 10 ||
-        cmp_cpu.register_b != 10) {
+        cmp_cpu.register_b != 10)
+    {
         std::cerr << "FAIL: Compare equal registers" << std::endl;
         return 1;
     }
 
     std::cout << "PASS: Compare equal registers" << std::endl;
 
-    // Test 21: Jump when registers are equal
+    // Test: Jump when registers are equal
     CPU je_equal_cpu;
     je_equal_cpu.register_a = 10;
     je_equal_cpu.register_b = 10;
@@ -400,14 +453,15 @@ int main() {
     je_equal_cpu.run();
 
     if (je_equal_cpu.register_a != 10 ||
-        !je_equal_cpu.halted) {
+        !je_equal_cpu.halted)
+    {
         std::cerr << "FAIL: JE when registers are equal" << std::endl;
         return 1;
     }
 
     std::cout << "PASS: JE when registers are equal" << std::endl;
 
-    // Test 22: Do not jump when registers are different
+    // Test: Do not jump when registers are different
     CPU je_different_cpu;
     je_different_cpu.register_a = 10;
     je_different_cpu.register_b = 5;
@@ -421,15 +475,15 @@ int main() {
     je_different_cpu.run();
 
     if (je_different_cpu.register_a != 99 ||
-        !je_different_cpu.halted) {
+        !je_different_cpu.halted)
+    {
         std::cerr << "FAIL: JE when registers differ" << std::endl;
         return 1;
     }
 
     std::cout << "PASS: JE when registers differ" << std::endl;
 
-
-    // Test 23: Compare less than and greater than
+    // Test: Compare less than and greater than
     CPU compare_cpu;
 
     compare_cpu.register_a = 3;
@@ -440,7 +494,8 @@ int main() {
 
     if (compare_cpu.zero_flag ||
         !compare_cpu.less_flag ||
-        compare_cpu.greater_flag) {
+        compare_cpu.greater_flag)
+    {
         std::cerr << "FAIL: A less than B" << std::endl;
         return 1;
     }
@@ -456,15 +511,15 @@ int main() {
 
     if (compare_cpu.zero_flag ||
         compare_cpu.less_flag ||
-        !compare_cpu.greater_flag) {
+        !compare_cpu.greater_flag)
+    {
         std::cerr << "FAIL: A greater than B" << std::endl;
         return 1;
     }
 
     std::cout << "PASS: A greater than B" << std::endl;
 
-    
-    // Test 25: Jump when A is less than B
+    // Test: Jump when A is less than B
     CPU jl_cpu;
     jl_cpu.register_a = 3;
     jl_cpu.register_b = 5;
@@ -476,14 +531,15 @@ int main() {
     jl_cpu.write_memory(6, CPU::OP_HALT);
     jl_cpu.run();
 
-    if (jl_cpu.register_a != 3 || !jl_cpu.halted) {
+    if (jl_cpu.register_a != 3 || !jl_cpu.halted)
+    {
         std::cerr << "FAIL: JL when A is less than B" << std::endl;
         return 1;
     }
 
     std::cout << "PASS: JL when A is less than B" << std::endl;
 
-    // Test 26: Jump when A is greater than B
+    // Test: Jump when A is greater than B
     CPU jg_cpu;
     jg_cpu.register_a = 8;
     jg_cpu.register_b = 5;
@@ -495,15 +551,15 @@ int main() {
     jg_cpu.write_memory(6, CPU::OP_HALT);
     jg_cpu.run();
 
-    if (jg_cpu.register_a != 8 || !jg_cpu.halted) {
+    if (jg_cpu.register_a != 8 || !jg_cpu.halted)
+    {
         std::cerr << "FAIL: JG when A is greater than B" << std::endl;
         return 1;
     }
 
     std::cout << "PASS: JG when A is greater than B" << std::endl;
 
-    
-    // Test 27: Addition program (12 + 4 = 16)
+    // Test: Addition program (12 + 4 = 16)
     CPU addition_test;
     addition_test.write_memory(0, CPU::OP_LOAD);
     addition_test.write_memory(1, 12);
@@ -514,15 +570,15 @@ int main() {
     addition_test.run();
 
     if (addition_test.register_a != 16 ||
-        !addition_test.halted) {
+        !addition_test.halted)
+    {
         std::cerr << "FAIL: Addition program (12 + 4)" << std::endl;
         return 1;
     }
 
     std::cout << "PASS: Addition program (12 + 4)" << std::endl;
 
-
-    // Test 28: Subtraction program (12 - 4 = 8)
+    // Test: Subtraction program (12 - 4 = 8)
     CPU subtraction_test;
     subtraction_test.write_memory(0, CPU::OP_LOAD);
     subtraction_test.write_memory(1, 12);
@@ -533,27 +589,28 @@ int main() {
     subtraction_test.run();
 
     if (subtraction_test.register_a != 8 ||
-        !subtraction_test.halted) {
+        !subtraction_test.halted)
+    {
         std::cerr << "FAIL: Subtraction program (12 - 4)" << std::endl;
         return 1;
     }
 
     std::cout << "PASS: Subtraction program (12 - 4)" << std::endl;
 
-
     // Test: ADD sets zero_flag when the result wraps to zero
     CPU add_zero_test;
     add_zero_test.register_a = 255;
     add_zero_test.add(1);
 
-    if (add_zero_test.register_a != 0 || !add_zero_test.zero_flag) {
+    if (add_zero_test.register_a != 0 || !add_zero_test.zero_flag)
+    {
         std::cerr << "FAIL: ADD zero flag after overflow" << std::endl;
         return 1;
     }
 
     std::cout << "PASS: ADD zero flag after overflow" << std::endl;
 
-        // Test: ADD preserves comparison flags
+    // Test: ADD preserves comparison flags
     CPU add_flags_test;
     add_flags_test.register_a = 2;
     add_flags_test.register_b = 5;
@@ -565,7 +622,8 @@ int main() {
     add_flags_test.write_memory(5, CPU::OP_HALT);
     add_flags_test.run();
 
-    if (!add_flags_test.less_flag || add_flags_test.greater_flag) {
+    if (!add_flags_test.less_flag || add_flags_test.greater_flag)
+    {
         std::cerr << "FAIL: ADD preserves comparison flags" << std::endl;
         return 1;
     }
@@ -577,13 +635,13 @@ int main() {
     sub_zero_test.register_a = 5;
     sub_zero_test.subtract(5);
 
-    if (sub_zero_test.register_a != 0 || !sub_zero_test.zero_flag) {
+    if (sub_zero_test.register_a != 0 || !sub_zero_test.zero_flag)
+    {
         std::cerr << "FAIL: SUB zero flag when result is zero" << std::endl;
         return 1;
     }
 
     std::cout << "PASS: SUB zero flag when result is zero" << std::endl;
-
 
     // Test: SUB wraps around at 8-bit boundary
     CPU sub_underflow_test;
@@ -591,15 +649,15 @@ int main() {
     sub_underflow_test.subtract(1);
 
     if (sub_underflow_test.register_a != 255 ||
-        sub_underflow_test.zero_flag) {
+        sub_underflow_test.zero_flag)
+    {
         std::cerr << "FAIL: SUB 8-bit underflow" << std::endl;
         return 1;
     }
 
     std::cout << "PASS: SUB 8-bit underflow" << std::endl;
 
-
-    // Test 29: Equality comparison program (7 == 7)
+    // Test: Equality comparison program (7 == 7)
     CPU equal_program_test;
     const uint8_t equal_program[] = {
         CPU::OP_LOAD, 7,
@@ -616,27 +674,26 @@ int main() {
         CPU::OP_HALT,
         0,
         CPU::OP_LOAD, 3,
-        CPU::OP_HALT
-    };
+        CPU::OP_HALT};
 
-    for (size_t i = 0; i < sizeof(equal_program); ++i) {
+    for (size_t i = 0; i < sizeof(equal_program); ++i)
+    {
         equal_program_test.write_memory(
-            static_cast<uint16_t>(i), equal_program[i]
-        );
+            static_cast<uint16_t>(i), equal_program[i]);
     }
 
     equal_program_test.run();
 
     if (equal_program_test.register_a != 3 ||
-        !equal_program_test.halted) {
+        !equal_program_test.halted)
+    {
         std::cerr << "FAIL: Equality comparison program" << std::endl;
         return 1;
     }
 
     std::cout << "PASS: Equality comparison program" << std::endl;
 
-
-    // Test 30: Less-than comparison program (4 < 12)
+    // Test: Less-than comparison program (4 < 12)
     CPU less_program_test;
     const uint8_t less_program[] = {
         CPU::OP_LOAD, 4,
@@ -653,27 +710,26 @@ int main() {
         CPU::OP_HALT,
         0,
         CPU::OP_LOAD, 3,
-        CPU::OP_HALT
-    };
+        CPU::OP_HALT};
 
-    for (size_t i = 0; i < sizeof(less_program); ++i) {
+    for (size_t i = 0; i < sizeof(less_program); ++i)
+    {
         less_program_test.write_memory(
-            static_cast<uint16_t>(i), less_program[i]
-        );
+            static_cast<uint16_t>(i), less_program[i]);
     }
 
     less_program_test.run();
 
     if (less_program_test.register_a != 1 ||
-        !less_program_test.halted) {
+        !less_program_test.halted)
+    {
         std::cerr << "FAIL: Less-than comparison program" << std::endl;
         return 1;
     }
 
     std::cout << "PASS: Less-than comparison program" << std::endl;
-    
-    
-    // Test 31: Bitwise AND
+
+    // Test: Bitwise AND
     CPU and_cpu;
 
     and_cpu.write_memory(0, CPU::OP_LOAD);
@@ -687,14 +743,15 @@ int main() {
 
     if (and_cpu.register_a != 8 ||
         and_cpu.register_b != 10 ||
-        !and_cpu.halted) {
+        !and_cpu.halted)
+    {
         std::cerr << "FAIL: Bitwise AND" << std::endl;
         return 1;
     }
 
     std::cout << "PASS: Bitwise AND" << std::endl;
-    
-    // Test 32: Bitwise OR
+
+    // Test: Bitwise OR
     CPU or_cpu;
 
     or_cpu.write_memory(0, CPU::OP_LOAD);
@@ -708,15 +765,15 @@ int main() {
 
     if (or_cpu.register_a != 14 ||
         or_cpu.register_b != 10 ||
-        !or_cpu.halted) {
+        !or_cpu.halted)
+    {
         std::cerr << "FAIL: Bitwise OR" << std::endl;
         return 1;
     }
 
     std::cout << "PASS: Bitwise OR" << std::endl;
 
-
-    // Test 33: Bitwise XOR
+    // Test: Bitwise XOR
     CPU xor_cpu;
 
     xor_cpu.write_memory(0, CPU::OP_LOAD);
@@ -730,15 +787,15 @@ int main() {
 
     if (xor_cpu.register_a != 6 ||
         xor_cpu.register_b != 10 ||
-        !xor_cpu.halted) {
+        !xor_cpu.halted)
+    {
         std::cerr << "FAIL: Bitwise XOR" << std::endl;
         return 1;
     }
 
     std::cout << "PASS: Bitwise XOR" << std::endl;
 
-
-    // Test 34: AND produces zero
+    // Test: AND produces zero
     CPU and_zero_cpu;
 
     and_zero_cpu.write_memory(0, CPU::OP_LOAD);
@@ -752,14 +809,15 @@ int main() {
 
     if (and_zero_cpu.register_a != 0 ||
         !and_zero_cpu.zero_flag ||
-        !and_zero_cpu.halted) {
+        !and_zero_cpu.halted)
+    {
         std::cerr << "FAIL: AND produces zero" << std::endl;
         return 1;
     }
 
     std::cout << "PASS: AND produces zero" << std::endl;
 
-    // Test 35: OR produces zero
+    // Test: OR produces zero
     CPU or_zero_cpu;
 
     or_zero_cpu.write_memory(0, CPU::OP_LOAD);
@@ -773,15 +831,15 @@ int main() {
 
     if (or_zero_cpu.register_a != 0 ||
         !or_zero_cpu.zero_flag ||
-        !or_zero_cpu.halted) {
+        !or_zero_cpu.halted)
+    {
         std::cerr << "FAIL: OR produces zero" << std::endl;
         return 1;
     }
 
     std::cout << "PASS: OR produces zero" << std::endl;
 
-
-    // Test 36: XOR produces zero
+    // Test: XOR produces zero
     CPU xor_zero_cpu;
 
     xor_zero_cpu.write_memory(0, CPU::OP_LOAD);
@@ -795,15 +853,15 @@ int main() {
 
     if (xor_zero_cpu.register_a != 0 ||
         !xor_zero_cpu.zero_flag ||
-        !xor_zero_cpu.halted) {
+        !xor_zero_cpu.halted)
+    {
         std::cerr << "FAIL: XOR produces zero" << std::endl;
         return 1;
     }
 
     std::cout << "PASS: XOR produces zero" << std::endl;
 
-
-    // Test 37: Bitwise NOT
+    // Test: Bitwise NOT
     CPU not_cpu;
     not_cpu.write_memory(0, CPU::OP_LOAD);
     not_cpu.write_memory(1, 12);
@@ -813,14 +871,14 @@ int main() {
 
     if (not_cpu.register_a != 243 ||
         not_cpu.zero_flag ||
-        !not_cpu.halted) {
+        !not_cpu.halted)
+    {
         std::cerr << "FAIL: Bitwise NOT" << std::endl;
         return 1;
     }
     std::cout << "PASS: Bitwise NOT" << std::endl;
 
-
-    // Test 38: NOT produces zero
+    // Test: NOT produces zero
     CPU not_zero_cpu;
     not_zero_cpu.write_memory(0, CPU::OP_LOAD);
     not_zero_cpu.write_memory(1, 255);
@@ -830,14 +888,14 @@ int main() {
 
     if (not_zero_cpu.register_a != 0 ||
         !not_zero_cpu.zero_flag ||
-        !not_zero_cpu.halted) {
+        !not_zero_cpu.halted)
+    {
         std::cerr << "FAIL: NOT produces zero" << std::endl;
         return 1;
     }
     std::cout << "PASS: NOT produces zero" << std::endl;
 
-
-    // Test 39: Shift left
+    // Test: Shift left
     CPU shl_cpu;
     shl_cpu.write_memory(0, CPU::OP_LOAD);
     shl_cpu.write_memory(1, 12);
@@ -847,14 +905,14 @@ int main() {
 
     if (shl_cpu.register_a != 24 ||
         shl_cpu.zero_flag ||
-        !shl_cpu.halted) {
+        !shl_cpu.halted)
+    {
         std::cerr << "FAIL: Shift left" << std::endl;
         return 1;
     }
     std::cout << "PASS: Shift left" << std::endl;
 
-
-    // Test 40: Shift left overflow
+    // Test: Shift left overflow
     CPU shl_overflow_cpu;
     shl_overflow_cpu.write_memory(0, CPU::OP_LOAD);
     shl_overflow_cpu.write_memory(1, 128);
@@ -864,14 +922,14 @@ int main() {
 
     if (shl_overflow_cpu.register_a != 0 ||
         !shl_overflow_cpu.zero_flag ||
-        !shl_overflow_cpu.halted) {
+        !shl_overflow_cpu.halted)
+    {
         std::cerr << "FAIL: Shift left overflow" << std::endl;
         return 1;
     }
     std::cout << "PASS: Shift left overflow" << std::endl;
 
-
-    // Test 41: Shift right
+    // Test: Shift right
     CPU shr_cpu;
     shr_cpu.write_memory(0, CPU::OP_LOAD);
     shr_cpu.write_memory(1, 12);
@@ -881,14 +939,14 @@ int main() {
 
     if (shr_cpu.register_a != 6 ||
         shr_cpu.zero_flag ||
-        !shr_cpu.halted) {
+        !shr_cpu.halted)
+    {
         std::cerr << "FAIL: Shift right" << std::endl;
         return 1;
     }
     std::cout << "PASS: Shift right" << std::endl;
 
-
-    // Test 42: Shift right produces zero
+    // Test: Shift right produces zero
     CPU shr_zero_cpu;
     shr_zero_cpu.write_memory(0, CPU::OP_LOAD);
     shr_zero_cpu.write_memory(1, 1);
@@ -898,14 +956,14 @@ int main() {
 
     if (shr_zero_cpu.register_a != 0 ||
         !shr_zero_cpu.zero_flag ||
-        !shr_zero_cpu.halted) {
+        !shr_zero_cpu.halted)
+    {
         std::cerr << "FAIL: Shift right produces zero" << std::endl;
         return 1;
     }
     std::cout << "PASS: Shift right produces zero" << std::endl;
 
-
-    // Test 43: PUSH and POP preserve register A
+    // Test: PUSH and POP preserve register A
     CPU push_pop_cpu;
     push_pop_cpu.write_memory(0, CPU::OP_LOAD);
     push_pop_cpu.write_memory(1, 42);
@@ -918,7 +976,8 @@ int main() {
 
     if (push_pop_cpu.register_a != 42 ||
         push_pop_cpu.stack_pointer != CPU::MEMORY_SIZE ||
-        !push_pop_cpu.halted) {
+        !push_pop_cpu.halted)
+    {
         std::cerr << "FAIL: PUSH and POP preserve register A"
                   << std::endl;
         return 1;
@@ -926,18 +985,21 @@ int main() {
     std::cout << "PASS: PUSH and POP preserve register A"
               << std::endl;
 
-
-    // Test 44: Stack underflow
+    // Test: Stack underflow
     CPU underflow_cpu;
     underflow_cpu.write_memory(0, CPU::OP_POP);
     underflow_cpu.write_memory(1, CPU::OP_HALT);
 
-    try {
+    try
+    {
         underflow_cpu.run();
         std::cerr << "FAIL: Stack underflow" << std::endl;
         return 1;
-    } catch (const std::runtime_error& error) {
-        if (std::string(error.what()) != "Stack underflow") {
+    }
+    catch (const std::runtime_error &error)
+    {
+        if (std::string(error.what()) != "Stack underflow")
+        {
             std::cerr << "FAIL: Unexpected stack error: "
                       << error.what() << std::endl;
             return 1;
@@ -945,19 +1007,22 @@ int main() {
         std::cout << "PASS: Stack underflow" << std::endl;
     }
 
-
-    // Test 45: Stack overflow
+    // Test: Stack overflow
     CPU overflow_cpu;
     overflow_cpu.stack_pointer = 0;
     overflow_cpu.write_memory(0, CPU::OP_PUSH);
     overflow_cpu.write_memory(1, CPU::OP_HALT);
 
-    try {
+    try
+    {
         overflow_cpu.run();
         std::cerr << "FAIL: Stack overflow" << std::endl;
         return 1;
-    } catch (const std::runtime_error& error) {
-        if (std::string(error.what()) != "Stack overflow") {
+    }
+    catch (const std::runtime_error &error)
+    {
+        if (std::string(error.what()) != "Stack overflow")
+        {
             std::cerr << "FAIL: Unexpected stack error: "
                       << error.what() << std::endl;
             return 1;
@@ -965,8 +1030,7 @@ int main() {
         std::cout << "PASS: Stack overflow" << std::endl;
     }
 
-
-    // Test 46: CALL and RET return to the main program
+    // Test: CALL and RET return to the main program
     CPU call_ret_cpu;
 
     call_ret_cpu.write_memory(0, CPU::OP_CALL);
@@ -983,7 +1047,8 @@ int main() {
     if (call_ret_cpu.register_a != 42 ||
         call_ret_cpu.program_counter != 3 ||
         call_ret_cpu.stack_pointer != CPU::MEMORY_SIZE ||
-        !call_ret_cpu.halted) {
+        !call_ret_cpu.halted)
+    {
         std::cerr << "FAIL: CALL and RET return to main program"
                   << std::endl;
         return 1;
@@ -992,8 +1057,7 @@ int main() {
     std::cout << "PASS: CALL and RET return to main program"
               << std::endl;
 
-    
-    // Test 47: Nested CALL and RET
+    // Test: Nested CALL and RET
     CPU nested_call_cpu;
 
     // Main program
@@ -1018,15 +1082,15 @@ int main() {
     if (nested_call_cpu.register_a != 42 ||
         nested_call_cpu.program_counter != 3 ||
         nested_call_cpu.stack_pointer != CPU::MEMORY_SIZE ||
-        !nested_call_cpu.halted) {
+        !nested_call_cpu.halted)
+    {
         std::cerr << "FAIL: Nested CALL and RET" << std::endl;
         return 1;
     }
 
     std::cout << "PASS: Nested CALL and RET" << std::endl;
 
-
-    // Test 48: CALL stack overflow
+    // Test: CALL stack overflow
     CPU call_overflow_cpu;
 
     call_overflow_cpu.stack_pointer = 1;
@@ -1034,12 +1098,16 @@ int main() {
     call_overflow_cpu.write_memory(1, 10);
     call_overflow_cpu.write_memory(10, CPU::OP_HALT);
 
-    try {
+    try
+    {
         call_overflow_cpu.run();
         std::cerr << "FAIL: CALL stack overflow" << std::endl;
         return 1;
-    } catch (const std::runtime_error& error) {
-        if (std::string(error.what()) != "Stack overflow") {
+    }
+    catch (const std::runtime_error &error)
+    {
+        if (std::string(error.what()) != "Stack overflow")
+        {
             std::cerr << "FAIL: Unexpected error: "
                       << error.what() << std::endl;
             return 1;
@@ -1047,19 +1115,23 @@ int main() {
 
         std::cout << "PASS: CALL stack overflow" << std::endl;
     }
-        // Test 49: RET without CALL must fail
+    // Test: RET without CALL must fail
     CPU ret_without_call_cpu;
 
     ret_without_call_cpu.write_memory(0, CPU::OP_PUSH);
     ret_without_call_cpu.write_memory(1, CPU::OP_PUSH);
     ret_without_call_cpu.write_memory(2, CPU::OP_RET);
 
-    try {
+    try
+    {
         ret_without_call_cpu.run();
         std::cerr << "FAIL: RET without CALL" << std::endl;
         return 1;
-    } catch (const std::runtime_error& error) {
-        if (std::string(error.what()) != "Stack underflow") {
+    }
+    catch (const std::runtime_error &error)
+    {
+        if (std::string(error.what()) != "Stack underflow")
+        {
             std::cerr << "FAIL: Unexpected RET error: "
                       << error.what() << std::endl;
             return 1;
@@ -1068,7 +1140,7 @@ int main() {
         std::cout << "PASS: RET without CALL" << std::endl;
     }
 
-    // Test 50: RET after PUSH must fail
+    // Test: RET after PUSH must fail
     CPU ret_after_push_cpu;
 
     ret_after_push_cpu.write_memory(0, CPU::OP_CALL);
@@ -1078,12 +1150,16 @@ int main() {
     ret_after_push_cpu.write_memory(6, CPU::OP_PUSH);
     ret_after_push_cpu.write_memory(7, CPU::OP_RET);
 
-    try {
+    try
+    {
         ret_after_push_cpu.run();
         std::cerr << "FAIL: RET after PUSH" << std::endl;
         return 1;
-    } catch (const std::runtime_error& error) {
-        if (std::string(error.what()) != "Stack underflow") {
+    }
+    catch (const std::runtime_error &error)
+    {
+        if (std::string(error.what()) != "Stack underflow")
+        {
             std::cerr << "FAIL: Unexpected RET after PUSH error: "
                       << error.what() << std::endl;
             return 1;
@@ -1092,7 +1168,7 @@ int main() {
         std::cout << "PASS: RET after PUSH" << std::endl;
     }
 
-    // Test 51: POP must not consume a return address
+    // Test: POP must not consume a return address
     CPU pop_return_address_cpu;
 
     pop_return_address_cpu.write_memory(0, CPU::OP_CALL);
@@ -1102,12 +1178,16 @@ int main() {
     pop_return_address_cpu.write_memory(6, CPU::OP_POP);
     pop_return_address_cpu.write_memory(7, CPU::OP_RET);
 
-    try {
+    try
+    {
         pop_return_address_cpu.run();
         std::cerr << "FAIL: POP consumed return address" << std::endl;
         return 1;
-    } catch (const std::runtime_error& error) {
-        if (std::string(error.what()) != "Stack underflow") {
+    }
+    catch (const std::runtime_error &error)
+    {
+        if (std::string(error.what()) != "Stack underflow")
+        {
             std::cerr << "FAIL: Unexpected error: "
                       << error.what() << std::endl;
             return 1;
@@ -1117,7 +1197,7 @@ int main() {
                   << std::endl;
     }
 
-    // Test 52: PUSH and POP inside a subroutine preserve return address
+    // Test: PUSH and POP inside a subroutine preserve return address
     CPU push_pop_subroutine_cpu;
 
     push_pop_subroutine_cpu.write_memory(0, CPU::OP_CALL);
@@ -1137,7 +1217,8 @@ int main() {
     if (push_pop_subroutine_cpu.register_a != 42 ||
         push_pop_subroutine_cpu.program_counter != 3 ||
         push_pop_subroutine_cpu.stack_pointer != CPU::MEMORY_SIZE ||
-        !push_pop_subroutine_cpu.halted) {
+        !push_pop_subroutine_cpu.halted)
+    {
         std::cerr << "FAIL: PUSH and POP inside subroutine"
                   << std::endl;
         return 1;
@@ -1145,8 +1226,8 @@ int main() {
 
     std::cout << "PASS: PUSH and POP inside subroutine"
               << std::endl;
-    
-      // Test 53: load_program accepts maximum program size
+
+    // Test: load_program accepts maximum program size
     {
         CPU test_cpu;
         std::vector<uint8_t> program(CPU::STACK_LIMIT, CPU::OP_HALT);
@@ -1165,7 +1246,7 @@ int main() {
         }
     }
 
-    // Test 54: load_program rejects oversized program
+    // Test: load_program rejects oversized program
     {
         CPU test_cpu;
         std::vector<uint8_t> program(CPU::STACK_LIMIT + 1, CPU::OP_HALT);
@@ -1177,7 +1258,7 @@ int main() {
                       << std::endl;
             return 1;
         }
-        catch (const std::out_of_range&)
+        catch (const std::out_of_range &)
         {
             std::cout << "PASS: load_program rejects oversized program"
                       << std::endl;
@@ -1190,8 +1271,7 @@ int main() {
         }
     }
 
-    
-    // Test 57: Instruction names
+    // Test: Instruction names
     const uint8_t opcodes[] = {
         CPU::OP_LOAD, CPU::OP_ADD, CPU::OP_SUB,
         CPU::OP_JMP, CPU::OP_JZ, CPU::OP_LOAD_MEM,
@@ -1202,8 +1282,7 @@ int main() {
         CPU::OP_AND, CPU::OP_OR, CPU::OP_XOR,
         CPU::OP_NOT, CPU::OP_SHL, CPU::OP_SHR,
         CPU::OP_PUSH, CPU::OP_POP, CPU::OP_CALL,
-        CPU::OP_RET, CPU::OP_HALT
-    };
+        CPU::OP_RET, CPU::OP_HALT};
 
     for (uint8_t opcode : opcodes)
     {
@@ -1223,9 +1302,6 @@ int main() {
 
     std::cout << "PASS: All instruction names" << std::endl;
 
-
     std::cout << "All tests passed." << std::endl;
     return 0;
-
-
 }
