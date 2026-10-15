@@ -585,6 +585,20 @@ int main() {
     std::cout << "PASS: SUB zero flag when result is zero" << std::endl;
 
 
+    // Test: SUB wraps around at 8-bit boundary
+    CPU sub_underflow_test;
+    sub_underflow_test.register_a = 0;
+    sub_underflow_test.subtract(1);
+
+    if (sub_underflow_test.register_a != 255 ||
+        sub_underflow_test.zero_flag) {
+        std::cerr << "FAIL: SUB 8-bit underflow" << std::endl;
+        return 1;
+    }
+
+    std::cout << "PASS: SUB 8-bit underflow" << std::endl;
+
+
     // Test 29: Equality comparison program (7 == 7)
     CPU equal_program_test;
     const uint8_t equal_program[] = {
