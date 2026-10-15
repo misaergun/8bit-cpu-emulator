@@ -943,6 +943,51 @@ int main() {
 
         std::cout << "PASS: CALL stack overflow" << std::endl;
     }
+        // Test 49: RET without CALL must fail
+    CPU ret_without_call_cpu;
+
+    ret_without_call_cpu.write_memory(0, CPU::OP_PUSH);
+    ret_without_call_cpu.write_memory(1, CPU::OP_PUSH);
+    ret_without_call_cpu.write_memory(2, CPU::OP_RET);
+
+    try {
+        ret_without_call_cpu.run();
+        std::cerr << "FAIL: RET without CALL" << std::endl;
+        return 1;
+    } catch (const std::runtime_error& error) {
+        if (std::string(error.what()) != "Stack underflow") {
+            std::cerr << "FAIL: Unexpected RET error: "
+                      << error.what() << std::endl;
+            return 1;
+        }
+
+        std::cout << "PASS: RET without CALL" << std::endl;
+    }
+
+    // Test 50: RET after PUSH must fail
+    CPU ret_after_push_cpu;
+
+    ret_after_push_cpu.write_memory(0, CPU::OP_CALL);
+    ret_after_push_cpu.write_memory(1, 6);
+    ret_after_push_cpu.write_memory(2, CPU::OP_HALT);
+
+    ret_after_push_cpu.write_memory(6, CPU::OP_PUSH);
+    ret_after_push_cpu.write_memory(7, CPU::OP_RET);
+
+    try {
+        ret_after_push_cpu.run();
+        std::cerr << "FAIL: RET after PUSH" << std::endl;
+        return 1;
+    } catch (const std::runtime_error& error) {
+        if (std::string(error.what()) != "Stack underflow") {
+            std::cerr << "FAIL: Unexpected RET after PUSH error: "
+                      << error.what() << std::endl;
+            return 1;
+        }
+
+        std::cout << "PASS: RET after PUSH" << std::endl;
+    }
+
 
     
     std::cout << "All tests passed." << std::endl;

@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 class CPU
 {
@@ -45,6 +46,7 @@ public:
     uint16_t program_counter = 0;
     uint16_t stack_pointer = STACK_START;
     uint16_t stack_size = 0;
+    std::vector<uint16_t> return_addresses;
     std::array<uint8_t, MEMORY_SIZE> memory{};
 
     bool halted = false;
@@ -142,18 +144,14 @@ public:
 
         case OP_LOAD_B:
         {
-
             uint8_t value = fetch();
-
             register_b = value;
-
             break;
         }
 
         case OP_STORE_B:
         {
             uint8_t address = fetch();
-
             if (address >= STACK_LIMIT)
             {
                 throw std::runtime_error(
@@ -166,97 +164,69 @@ public:
 
         case OP_ADD:
         {
-
             uint8_t value = fetch();
-
             add(value);
-
             break;
         }
 
         case OP_ADD_B:
         {
-
             add(register_b);
-
             break;
         }
 
         case OP_SUB:
         {
-
             uint8_t value = fetch();
-
             subtract(value);
-
             break;
         }
 
         case OP_SUB_B:
         {
-
             subtract(register_b);
-
             break;
         }
 
         case OP_AND:
         {
-
             register_a = register_a & register_b;
-
             zero_flag = (register_a == 0);
-
             break;
         }
 
         case OP_OR:
         {
-
             register_a = register_a | register_b;
-
             zero_flag = (register_a == 0);
-
             break;
         }
 
         case OP_XOR:
         {
-
             register_a = register_a ^ register_b;
-
             zero_flag = (register_a == 0);
-
             break;
         }
 
         case OP_NOT:
         {
-
             register_a = static_cast<uint8_t>(~register_a);
-
             zero_flag = (register_a == 0);
-
             break;
         }
 
         case OP_SHL:
         {
-
             register_a = static_cast<uint8_t>(register_a << 1);
-
             zero_flag = (register_a == 0);
-
             break;
         }
 
         case OP_SHR:
         {
-
             register_a = static_cast<uint8_t>(register_a >> 1);
-
             zero_flag = (register_a == 0);
-
             break;
         }
 
@@ -275,7 +245,6 @@ public:
 
         case OP_POP:
         {
-
             if (stack_size == 0 || stack_pointer >= MEMORY_SIZE) {
             throw std::runtime_error("Stack underflow");
         }
@@ -290,37 +259,29 @@ public:
 
         case OP_CALL:
         {
-
             uint8_t address = fetch();
-
             if (stack_pointer < STACK_LIMIT + 2 ||
             stack_size > (MEMORY_SIZE - STACK_LIMIT) - 2) {
             throw std::runtime_error("Stack overflow");
         }
 
             // Save the return address on the stack.
+                stack_pointer -= 2;
+                stack_size += 2;
 
-            stack_pointer -= 2;
-            stack_size += 2;
+                return_addresses.push_back(stack_pointer);
 
             write_stack_memory(
-
                 stack_pointer,
-
                 static_cast<uint8_t>(program_counter & 0xFF)
-
             );
 
             write_stack_memory(
-
                 stack_pointer + 1,
-
                 static_cast<uint8_t>((program_counter >> 8) & 0xFF)
-
             );
 
             program_counter = address;
-
             break;
         }
 
@@ -328,19 +289,21 @@ public:
         {
 
             if (stack_size < 2 || stack_pointer > MEMORY_SIZE - 2) {
-            throw std::runtime_error("Stack underflow");
+                throw std::runtime_error("Stack underflow");
         }
+            if (return_addresses.empty() ||
+                return_addresses.back() != stack_pointer) {
+                throw std::runtime_error("Stack underflow");
+            }
 
             uint16_t low_byte = read_memory(stack_pointer);
-
             uint16_t high_byte = read_memory(stack_pointer + 1);
 
             program_counter = static_cast<uint16_t>(
-
                 low_byte | (high_byte << 8)
-
             );
 
+            return_addresses.pop_back();
             stack_pointer += 2;
             stack_size -= 2;
 
@@ -349,148 +312,109 @@ public:
 
         case OP_JMP:
         {
-
             uint8_t address = fetch();
-
             program_counter = address;
-
             break;
         }
 
         case OP_JZ:
         {
-
             uint8_t address = fetch();
-
             if (register_a == 0)
             {
-
                 program_counter = address;
             }
-
             break;
         }
 
         case OP_LOAD_MEM:
         {
-
             uint8_t address = fetch();
-
             register_a = read_memory(address);
-
             break;
         }
 
         case OP_STORE:
         {
             uint8_t address = fetch();
-
             if (address >= STACK_LIMIT)
             {
                 throw std::runtime_error(
                     "Cannot write to stack memory using STORE");
             }
-
             write_memory(address, register_a);
             break;
         }
 
         case OP_MOV_A_B:
         {
-
             register_a = register_b;
-
             break;
         }
 
         case OP_MOV_B_A:
         {
-
             register_b = register_a;
-
             break;
         }
 
         case OP_CMP:
         {
-
             zero_flag = (register_a == register_b);
-
             less_flag = (register_a < register_b);
-
             greater_flag = (register_a > register_b);
-
             break;
         }
 
         case OP_JE:
         {
-
             uint8_t address = fetch();
-
             if (zero_flag)
             {
-
                 program_counter = address;
             }
-
             break;
         }
 
         case OP_JL:
         {
-
             uint8_t address = fetch();
-
             if (less_flag)
             {
-
                 program_counter = address;
             }
-
             break;
         }
 
         case OP_JG:
         {
-
             uint8_t address = fetch();
-
             if (greater_flag)
             {
-
                 program_counter = address;
             }
-
             break;
         }
 
         case OP_HALT:
-
             halted = true;
-
             break;
-
         default:
-
             throw std::runtime_error(
-
                 "Unknown instruction: " +
-
                 std::to_string(instruction)
-
             );
         }
     }
 
     void reset()
     {
-
         register_a = 0;
         register_b = 0;
         program_counter = 0;
         stack_pointer = STACK_START;
         stack_size = 0;
+        return_addresses.clear();
         halted = false;
         zero_flag = false;
         less_flag = false;
@@ -500,26 +424,17 @@ public:
 
     void run()
     {
-
         constexpr uint32_t MAX_STEPS = 1000;
-
         uint32_t steps = 0;
-
         while (!halted)
         {
-
             if (steps >= MAX_STEPS)
             {
-
                 throw std::runtime_error(
-
                     "Maximum instruction limit reached"
-
                 );
             }
-
             step();
-
             ++steps;
         }
     }
