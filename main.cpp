@@ -133,6 +133,20 @@ const char *instruction_name(uint8_t instruction)
         return "JL";
     case CPU::OP_JG:
         return "JG";
+    case CPU::OP_NOT:
+        return "NOT";
+    case CPU::OP_SHL:
+        return "SHL";
+    case CPU::OP_SHR:
+        return "SHR";
+    case CPU::OP_PUSH:
+        return "PUSH";
+    case CPU::OP_POP:
+        return "POP";
+    case CPU::OP_CALL:
+        return "CALL";
+    case CPU::OP_RET:
+        return "RET";
     case CPU::OP_HALT:
         return "HALT";
     case CPU::OP_AND:
