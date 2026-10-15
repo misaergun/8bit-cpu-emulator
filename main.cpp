@@ -225,13 +225,11 @@ bool execute_program(CPU &cpu)
 
             if (!cpu.halted)
             {
+
                 std::cout << "Press Enter for next instruction...";
+                std::cout.flush();
 
-                std::cin.ignore(
-                    std::numeric_limits<std::streamsize>::max(), '\n');
-                std::cin.get();
-
-                if (!std::cin)
+                if (!std::cin.get())
                 {
                     return false;
                 }
@@ -303,6 +301,11 @@ void inspect_memory_menu(const CPU &cpu)
 
         if (!(std::cin >> address))
         {
+            if (std::cin.eof())
+            {
+                return;
+            }
+
             std::cerr << "Invalid address. Enter a value from 0 to 255.\n";
             std::cin.clear();
             std::cin.ignore(
@@ -366,6 +369,11 @@ void inspect_memory_menu(const CPU &cpu)
 
         if (!(std::cin >> start))
         {
+            if (std::cin.eof())
+            {
+                return;
+            }
+
             std::cerr << "Invalid start address. Enter a value from 0 to 255.\n";
             std::cin.clear();
             std::cin.ignore(
@@ -389,6 +397,11 @@ void inspect_memory_menu(const CPU &cpu)
 
         if (!(std::cin >> count))
         {
+            if (std::cin.eof())
+            {
+                return;
+            }
+
             std::cerr << "Invalid byte count. Enter a positive integer.\n";
             std::cin.clear();
             std::cin.ignore(
@@ -438,7 +451,12 @@ int main()
 
             if (!(std::cin >> program_choice))
             {
-                std::cerr << "Invalid input. Enter 1, 2, or 3.\n";
+                if (std::cin.eof())
+                {
+                    return 1;
+                }
+
+                std::cerr << "Invalid input. Enter a valid program choice.\n";
                 std::cin.clear();
                 std::cin.ignore(
                     std::numeric_limits<std::streamsize>::max(), '\n');
