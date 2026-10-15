@@ -504,31 +504,38 @@ int main()
         }
 
         // Second number
-        while (true)
-        {
-            std::cout << "Enter the second number (0-255): ";
 
-            if (!(std::cin >> second))
+        second = 0;
+
+        // Second number is needed only for programs 1-6
+        if (program_choice >= 1 && program_choice <= 6)
+        {
+            while (true)
             {
-                if (std::cin.eof())
+                std::cout << "Enter the second number (0-255): ";
+
+                if (!(std::cin >> second))
                 {
-                    return 1;
+                    if (std::cin.eof())
+                    {
+                        return 1;
+                    }
+
+                    std::cerr << "Invalid number. Enter a value from 0 to 255.\n";
+                    std::cin.clear();
+                    std::cin.ignore(
+                        std::numeric_limits<std::streamsize>::max(), '\n');
+                    continue;
                 }
 
-                std::cerr << "Invalid number. Enter a value from 0 to 255.\n";
-                std::cin.clear();
-                std::cin.ignore(
-                    std::numeric_limits<std::streamsize>::max(), '\n');
-                continue;
-            }
+                if (second < 0 || second > 255)
+                {
+                    std::cerr << "Invalid number. Enter a value from 0 to 255.\n";
+                    continue;
+                }
 
-            if (second < 0 || second > 255)
-            {
-                std::cerr << "Invalid number. Enter a value from 0 to 255.\n";
-                continue;
+                break;
             }
-
-            break;
         }
 
         uint8_t a = static_cast<uint8_t>(first);
