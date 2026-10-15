@@ -230,26 +230,29 @@ public:
             break;
         }
 
+        
         case OP_PUSH:
         {
             if (stack_pointer <= STACK_LIMIT ||
-            stack_size >= MEMORY_SIZE - STACK_LIMIT) {
-            throw std::runtime_error("Stack overflow");
-        }
+                stack_size >= MEMORY_SIZE - STACK_LIMIT) {
+                throw std::runtime_error("Stack overflow");
+            }
 
             --stack_pointer;
             write_stack_memory(stack_pointer, register_a);
             ++stack_size;
+
             break;
         }
 
+        
         case OP_POP:
         {
             if (stack_size == 0 ||
                 stack_pointer >= MEMORY_SIZE ||
                 (!return_addresses.empty() &&
-                stack_pointer >= return_addresses.back() &&
-                stack_pointer < return_addresses.back() + 2)) {
+                 stack_pointer >= return_addresses.back() &&
+                 stack_pointer < return_addresses.back() + 2)) {
                 throw std::runtime_error("Stack underflow");
             }
 
@@ -261,19 +264,20 @@ public:
             break;
         }
 
+        
         case OP_CALL:
         {
             uint8_t address = fetch();
+
             if (stack_pointer < STACK_LIMIT + 2 ||
-            stack_size > (MEMORY_SIZE - STACK_LIMIT) - 2) {
-            throw std::runtime_error("Stack overflow");
-        }
+                stack_size > (MEMORY_SIZE - STACK_LIMIT) - 2) {
+                throw std::runtime_error("Stack overflow");
+            }
 
             // Save the return address on the stack.
-                stack_pointer -= 2;
-                stack_size += 2;
-
-                return_addresses.push_back(stack_pointer);
+            stack_pointer -= 2;
+            stack_size += 2;
+            return_addresses.push_back(stack_pointer);
 
             write_stack_memory(
                 stack_pointer,
@@ -289,12 +293,14 @@ public:
             break;
         }
 
+        
         case OP_RET:
         {
-
-            if (stack_size < 2 || stack_pointer > MEMORY_SIZE - 2) {
+            if (stack_size < 2 ||
+                stack_pointer > MEMORY_SIZE - 2) {
                 throw std::runtime_error("Stack underflow");
-        }
+            }
+
             if (return_addresses.empty() ||
                 return_addresses.back() != stack_pointer) {
                 throw std::runtime_error("Stack underflow");
