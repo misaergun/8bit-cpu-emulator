@@ -2,7 +2,9 @@
 #include <iostream>
 #include <stdexcept>
 #include "cpu.h"
+#include "program_loader.h"
 #include <string>
+#include <vector>
 
 int main() {
     // Test 1: Normal program
@@ -1044,10 +1046,53 @@ int main() {
 
     std::cout << "PASS: PUSH and POP inside subroutine"
               << std::endl;
-
-
-
     
+      // Test 53: load_program accepts maximum program size
+    {
+        CPU test_cpu;
+        std::vector<uint8_t> program(CPU::STACK_LIMIT, CPU::OP_HALT);
+
+        try
+        {
+            load_program(test_cpu, program);
+            std::cout << "PASS: load_program accepts maximum program size"
+                      << std::endl;
+        }
+        catch (...)
+        {
+            std::cerr << "FAIL: load_program rejects maximum program size"
+                      << std::endl;
+            return 1;
+        }
+    }
+
+    // Test 54: load_program rejects oversized program
+    {
+        CPU test_cpu;
+        std::vector<uint8_t> program(CPU::STACK_LIMIT + 1, CPU::OP_HALT);
+
+        try
+        {
+            load_program(test_cpu, program);
+            std::cerr << "FAIL: load_program accepts oversized program"
+                      << std::endl;
+            return 1;
+        }
+        catch (const std::out_of_range&)
+        {
+            std::cout << "PASS: load_program rejects oversized program"
+                      << std::endl;
+        }
+        catch (...)
+        {
+            std::cerr << "FAIL: load_program throws unexpected exception"
+                      << std::endl;
+            return 1;
+        }
+    }
+
     std::cout << "All tests passed." << std::endl;
     return 0;
+
+
 }

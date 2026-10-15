@@ -1,26 +1,11 @@
-
 #include <iostream>
 #include <vector>
 #include <cstdint>
 #include <limits>
 #include <iomanip>
 #include "cpu.h"
+#include "program_loader.h"
 
-void load_program(CPU &cpu, const std::vector<uint8_t> &program)
-{
-    if (program.size() > CPU::STACK_LIMIT)
-    {
-        throw std::out_of_range(
-            "Program exceeds available memory reserved for code and data");
-    }
-
-    for (size_t i = 0; i < program.size(); ++i)
-    {
-        cpu.write_memory(
-            static_cast<uint16_t>(i),
-            program[i]);
-    }
-}
 
 std::vector<uint8_t> comparison_program(uint8_t first, uint8_t second)
 {
