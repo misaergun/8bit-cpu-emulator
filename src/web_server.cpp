@@ -1392,10 +1392,13 @@ std::string directory_of(const std::string &path)
 
 bool find_web_root(const char *argv0)
 {
+    // The current directory first, then next to the executable, then the
+    // project root when the executable is in build/.
     std::vector<std::string> candidates = {"web"};
     if (argv0 != nullptr)
     {
         candidates.push_back(directory_of(argv0) + "/web");
+        candidates.push_back(directory_of(argv0) + "/../web");
     }
 
     for (const std::string &candidate : candidates)

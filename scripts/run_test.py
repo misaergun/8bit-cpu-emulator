@@ -1,10 +1,14 @@
 
+import os
 import subprocess
 import sys
 
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+EMULATOR = os.path.join(ROOT, "build", "cpu_emulator")
+
 try:
     result = subprocess.run(
-        ["./cpu_emulator"],
+        [EMULATOR],
         input=sys.stdin.read(),
         capture_output=True,
         text=True,

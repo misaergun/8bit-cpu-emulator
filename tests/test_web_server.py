@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """HTTP integration tests for web_server.
 
-Builds web_server, starts it on a test port, and checks the API against the
-terminal emulator (./cpu_emulator must already be built).
-Usage: python3 test_web_server.py
+Builds build/web_server, starts it on a test port, and checks the API against
+the terminal emulator (build/cpu_emulator must already be built).
+Usage (from any directory): python3 tests/test_web_server.py
 """
 
 import json
@@ -19,7 +19,10 @@ import urllib.request
 
 PORT = 18080
 BASE = f"http://127.0.0.1:{PORT}"
-HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BUILD = os.path.join(ROOT, "build")
+WEB_SERVER = os.path.join(BUILD, "web_server")
+CPU_EMULATOR = os.path.join(BUILD, "cpu_emulator")
 
 failures = 0
 
@@ -80,9 +83,9 @@ def terminal_result(choice, a, b):
     if choice <= 6:
         lines.append(str(b))
     lines += ["r", "n"]
-    out = subprocess.run(["./cpu_emulator"], input="\n".join(lines) + "\n",
+    out = subprocess.run([CPU_EMULATOR], input="\n".join(lines) + "\n",
                          capture_output=True, text=True, timeout=5,
-                         cwd=HERE).stdout
+                         cwd=ROOT).stdout
     for line in out.splitlines():
         if line.startswith("Final Register A:"):
             return int(line.split(":")[1])
@@ -290,9 +293,11 @@ def test_security_and_robustness():
 
 
 def test_missing_web_files():
+    # Mirrors the project layout: <tmp>/build/web_server, web files in <tmp>/web.
     with tempfile.TemporaryDirectory() as tmp:
-        exe = os.path.join(tmp, "web_server")
-        shutil.copy(os.path.join(HERE, "web_server"), exe)
+        os.makedirs(os.path.join(tmp, "build"))
+        exe = os.path.join(tmp, "build", "web_server")
+        shutil.copy(WEB_SERVER, exe)
         result = subprocess.run([exe, "--port", str(PORT + 1)], cwd=tmp,
                                 capture_output=True, text=True, timeout=5)
         check(result.returncode == 1 and "web/index.html" in result.stderr,
@@ -300,7 +305,7 @@ def test_missing_web_files():
 
         os.makedirs(os.path.join(tmp, "web"))
         for name in ["index.html", "style.css"]:
-            shutil.copy(os.path.join(HERE, "web", name),
+            shutil.copy(os.path.join(ROOT, "web", name),
                         os.path.join(tmp, "web", name))
         result = subprocess.run([exe, "--port", str(PORT + 1)], cwd=tmp,
                                 capture_output=True, text=True, timeout=5)
@@ -309,19 +314,20 @@ def test_missing_web_files():
 
 
 def main():
-    os.chdir(HERE)
+    os.chdir(ROOT)
+    os.makedirs(BUILD, exist_ok=True)
     build = subprocess.run(["clang++", "-std=c++17", "-Wall", "-Wextra",
-                            "web_server.cpp", "-o", "web_server"],
+                            "src/web_server.cpp", "-o", WEB_SERVER],
                            capture_output=True, text=True)
     check(build.returncode == 0 and "warning" not in build.stderr,
           "web_server builds without warnings", build.stderr)
     if build.returncode != 0:
         return 1
-    if not os.path.exists("cpu_emulator"):
-        print("FAIL: ./cpu_emulator not found; run ./run_all_tests.sh first")
+    if not os.path.exists(CPU_EMULATOR):
+        print("FAIL: build/cpu_emulator not found; run ./run_all_tests.sh first")
         return 1
 
-    server = subprocess.Popen(["./web_server", "--port", str(PORT)],
+    server = subprocess.Popen([WEB_SERVER, "--port", str(PORT)],
                               stdout=subprocess.DEVNULL,
                               stderr=subprocess.PIPE)
     try:

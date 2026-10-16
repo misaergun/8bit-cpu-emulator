@@ -3,6 +3,8 @@
 
 set -e
 
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+
 run_test() {
     local name="$1"
     local input="$2"
@@ -15,7 +17,7 @@ run_test() {
     local output
     local status=0
 
-    output=$(printf '%b' "$input" | python3 run_test.py 2>&1) || status=$?
+    output=$(printf '%b' "$input" | python3 "$ROOT/scripts/run_test.py" 2>&1) || status=$?
 
     if [[ "$output" == *"$expected"* &&
           "$output" != *"Program timed out"* &&

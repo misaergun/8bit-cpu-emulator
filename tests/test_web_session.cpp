@@ -1,8 +1,9 @@
 // Unit tests for the web server's CPU session logic.
-// Build: clang++ -std=c++17 -Wall -Wextra test_web_session.cpp -o test_web_session
+// Build (from the project root):
+// clang++ -std=c++17 -Wall -Wextra tests/test_web_session.cpp -o build/test_web_session
 
 #define main web_server_main
-#include "web_server.cpp"
+#include "../src/web_server.cpp"
 #undef main
 
 #include <iostream>

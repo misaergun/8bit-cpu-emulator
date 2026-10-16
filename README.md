@@ -1,6 +1,6 @@
 # 8-Bit CPU Emulator
 
-A small 8-bit CPU emulator written in C++17. It simulates a CPU with two general-purpose registers, comparison flags, 256 bytes of memory, a hardware-style stack, and subroutine calls. You run it from the command line: pick a built-in program, enter its inputs, and watch it execute one instruction at a time or all at once.
+A small 8-bit CPU emulator written in C++17. It simulates a CPU with two general-purpose registers, comparison flags, 256 bytes of memory, a hardware-style stack, and subroutine calls. You can run it from the command line or in the browser through a local web interface: pick a built-in program, enter its inputs, and watch it execute one instruction at a time or all at once.
 
 This is a learning project about CPU architecture, the fetch–decode–execute cycle, and testing low-level code.
 
@@ -15,7 +15,8 @@ This is a learning project about CPU architecture, the fetch–decode–execute 
 - **CPU state output** after every instruction: registers, program counter, flags, and halt status
 - **Memory inspection**: read a single address, or dump a range of addresses in hex and decimal
 - **Input validation** for every prompt, with clean exit on end of input (EOF)
-- **Unit and integration tests**, plus one script that builds and runs both
+- **Local web interface**: a dashboard served by a small C++ HTTP server that shows registers, flags, all 256 bytes of memory, and an instruction trace from the real CPU
+- **Unit and integration tests**, plus one script that builds and runs them all
 
 ## Instruction Set
 
@@ -52,7 +53,7 @@ Each opcode is one byte. Instructions that take an operand read one extra byte r
 |     27 | `RET`      | —       | Return from a subroutine                                |
 |    255 | `HALT`     | —       | Stop execution                                          |
 
-Opcode values are defined as constants in the `CPU` class in [`cpu.h`](cpu.h). Their names, used for the execution trace, are in [`instruction_names.h`](instruction_names.h).
+Opcode values are defined as constants in the `CPU` class in [`src/cpu.h`](src/cpu.h). Their names, used for the execution trace, are in [`src/instruction_names.h`](src/instruction_names.h).
 
 ## Project Structure
 
@@ -60,14 +61,27 @@ Opcode values are defined as constants in the `CPU` class in [`cpu.h`](cpu.h). T
 8bit-cpu-emulator/
 ├── .gitignore
 ├── README.md
-├── cpu.h                 # CPU class: registers, flags, memory, stack, instruction execution
-├── program_loader.h      # load_program(): copies a program into memory
-├── instruction_names.h   # Maps opcodes to mnemonics for the execution trace
-├── main.cpp              # Interactive emulator: program menu, execution modes, memory inspection
-├── test_cpu.cpp          # Unit tests for the CPU, loader, and instruction names
-├── test_main.sh          # Integration tests for the interactive emulator
-├── run_test.py           # Runs ./cpu_emulator with piped input and a 3-second timeout
-└── run_all_tests.sh      # Builds everything and runs all tests
+├── run_all_tests.sh            # Entry point: runs scripts/run_all_tests.sh
+├── src/
+│   ├── cpu.h                   # CPU class: registers, flags, memory, stack, instruction execution
+│   ├── program_loader.h        # load_program(): copies a program into memory
+│   ├── instruction_names.h     # Maps opcodes to mnemonics for the execution trace
+│   ├── programs.h              # The nine built-in programs, used by the web server
+│   ├── main.cpp                # Interactive emulator: program menu, execution modes, memory inspection
+│   └── web_server.cpp          # Local HTTP server and JSON API for the web interface
+├── web/
+│   ├── index.html              # Dashboard layout
+│   ├── style.css               # Dashboard styles
+│   └── app.js                  # Connects the dashboard to the API
+├── tests/
+│   ├── test_cpu.cpp            # Unit tests for the CPU, loader, and instruction names
+│   ├── test_main.sh            # Integration tests for the interactive emulator
+│   ├── test_web_session.cpp    # Unit tests for the web server's CPU session
+│   └── test_web_server.py      # HTTP integration tests for the web server
+├── scripts/
+│   ├── run_all_tests.sh        # Builds everything into build/ and runs all tests
+│   └── run_test.py             # Runs build/cpu_emulator with piped input and a 3-second timeout
+└── build/                      # Compiled programs (created by the build, not tracked by Git)
 ```
 
 ## Requirements
@@ -80,17 +94,25 @@ The project uses only the C++ standard library. It has no external dependencies 
 
 ## Build and Run
 
-Compile the emulator:
+Run all commands from the project root. Compiled programs go into `build/`.
+
+### Terminal emulator
 
 ```bash
-clang++ -std=c++17 main.cpp -o cpu_emulator
+mkdir -p build
+clang++ -std=c++17 src/main.cpp -o build/cpu_emulator
+./build/cpu_emulator
 ```
 
-Start it:
+### Web interface
 
 ```bash
-./cpu_emulator
+mkdir -p build
+clang++ -std=c++17 -Wall -Wextra src/web_server.cpp -o build/web_server
+./build/web_server
 ```
+
+Then open <http://127.0.0.1:8080>. Use `--port PORT` to choose another port. The server only listens on `127.0.0.1` and serves the files in `web/`; it finds them whether you start it from the project root or from `build/`.
 
 ## Usage
 
@@ -177,15 +199,20 @@ You can then run another program (`y`), which resets the CPU first, or exit (`n`
 
 This script:
 
-1. Builds `cpu_emulator` from `main.cpp`
-2. Builds and runs the unit tests in `test_cpu.cpp`
-3. Runs the integration tests in `test_main.sh`
+1. Builds `build/cpu_emulator` from `src/main.cpp`
+2. Builds and runs the unit tests in `tests/test_cpu.cpp`
+3. Runs the integration tests in `tests/test_main.sh`
+4. Builds `build/web_server` from `src/web_server.cpp`
+5. Builds and runs the web session unit tests in `tests/test_web_session.cpp`
+6. Runs the web server integration tests in `tests/test_web_server.py`
+
+It can be called from any directory.
 
 It stops at the first failure.
 
 ### Unit tests
 
-[`test_cpu.cpp`](test_cpu.cpp) tests the `CPU` class directly. It covers:
+[`tests/test_cpu.cpp`](tests/test_cpu.cpp) tests the `CPU` class directly. It covers:
 
 - Every instruction, including how each one affects registers and flags
 - 8-bit wraparound on addition, subtraction, and left shift
@@ -198,15 +225,16 @@ It stops at the first failure.
 Build and run them on their own:
 
 ```bash
-clang++ -std=c++17 test_cpu.cpp -o test_cpu
-./test_cpu
+mkdir -p build
+clang++ -std=c++17 tests/test_cpu.cpp -o build/test_cpu
+./build/test_cpu
 ```
 
 Each check prints `PASS: ...`. On the first failure, the program prints `FAIL: ...` and exits with a non-zero status.
 
 ### Integration tests
 
-[`test_main.sh`](test_main.sh) tests the interactive emulator end to end. Each test pipes scripted input through [`run_test.py`](run_test.py), which runs `./cpu_emulator` with a 3-second timeout. The test then checks both the output and the exit code. The tests cover:
+[`tests/test_main.sh`](tests/test_main.sh) tests the interactive emulator end to end. Each test pipes scripted input through [`scripts/run_test.py`](scripts/run_test.py), which runs `build/cpu_emulator` with a 3-second timeout. The test then checks both the output and the exit code. The tests cover:
 
 - Invalid program choice and invalid number input
 - EOF while waiting for the first or second number
@@ -215,8 +243,22 @@ Each check prints `PASS: ...`. On the first failure, the program prints `FAIL: .
 The emulator must be built first:
 
 ```bash
-clang++ -std=c++17 main.cpp -o cpu_emulator
-./test_main.sh
+mkdir -p build
+clang++ -std=c++17 src/main.cpp -o build/cpu_emulator
+./tests/test_main.sh
+```
+
+### Web tests
+
+- [`tests/test_web_session.cpp`](tests/test_web_session.cpp) tests the server's CPU session directly: the 1,000-instruction limit for runaway programs, CPU faults, reset, and comparison results.
+- [`tests/test_web_server.py`](tests/test_web_server.py) builds and starts `build/web_server` on port 18080 and tests the API over HTTP. It checks that all nine programs give the same result as `build/cpu_emulator`, and covers step and trace data, input validation, malformed requests, local-only access, and missing web files.
+
+```bash
+mkdir -p build
+clang++ -std=c++17 src/main.cpp -o build/cpu_emulator
+clang++ -std=c++17 -Wall -Wextra tests/test_web_session.cpp -o build/test_web_session
+./build/test_web_session
+python3 tests/test_web_server.py
 ```
 
 ## Technical Details
@@ -274,4 +316,4 @@ Invalid operations throw C++ exceptions (`std::runtime_error` or `std::out_of_ra
 - Loading a program larger than 192 bytes
 - Going over 1,000 instructions in `CPU::run()`, which catches infinite loops
 
-The interactive emulator in `main.cpp` runs the CPU with its own `step()` loop rather than `CPU::run()`, so the 1,000-instruction limit applies only when `run()` is called directly, as in the unit tests.
+The interactive emulator in `src/main.cpp` runs the CPU with its own `step()` loop rather than `CPU::run()`, so the 1,000-instruction limit applies only when `run()` is called directly, as in the unit tests.

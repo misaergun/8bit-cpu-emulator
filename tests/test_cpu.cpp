@@ -1,9 +1,9 @@
 
 #include <iostream>
 #include <stdexcept>
-#include "cpu.h"
-#include "program_loader.h"
-#include "instruction_names.h"
+#include "../src/cpu.h"
+#include "../src/program_loader.h"
+#include "../src/instruction_names.h"
 #include <string>
 #include <vector>
 #include <cstdint>
