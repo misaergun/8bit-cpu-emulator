@@ -16,6 +16,7 @@ This is a learning project about CPU architecture, the fetch–decode–execute 
 - **Memory inspection**: read a single address, or dump a range of addresses in hex and decimal
 - **Input validation** for every prompt, with clean exit on end of input (EOF)
 - **Browser dashboard**: the C++ CPU compiled to WebAssembly, showing registers, flags, all 256 bytes of memory, and an instruction trace. It is a static site with no backend, so it can be deployed to Vercel
+- **Assembly Editor**: write your own assembly programs in the browser. A C++ assembler turns them into machine code and runs them on the same CPU, highlighting the line being executed
 - **Unit and integration tests**, plus one script that builds and runs them all
 
 ## Instruction Set
@@ -69,13 +70,15 @@ Opcode values are defined as constants in the `CPU` class in [`src/cpu.h`](src/c
 │   ├── instruction_names.h     # Maps opcodes to mnemonics for the execution trace
 │   ├── programs.h              # The nine built-in programs used by the web interface
 │   ├── emulator_session.h      # CPU session with trace and JSON state, shared by WASM and the server
+│   ├── assembler.h             # Two-pass assembler: assembly source -> machine code
 │   ├── wasm_api.cpp            # C interface compiled to WebAssembly for the browser
 │   ├── main.cpp                # Interactive emulator: program menu, execution modes, memory inspection
 │   └── web_server.cpp          # Optional local HTTP server and JSON API (not needed by the browser app)
 ├── web/                        # Static site root (deployed to Vercel)
 │   ├── index.html              # Dashboard layout
 │   ├── style.css               # Dashboard styles
-│   ├── app.js                  # Connects the dashboard to the WebAssembly CPU
+│   ├── app.js                  # Connects the dashboard and the Assembly Editor to the WebAssembly CPU
+│   ├── examples.js             # Example programs for the Assembly Editor
 │   └── generated/              # Built by scripts/build_wasm.sh and committed
 │       ├── cpu.js              # Emscripten loader (defines createCpuModule)
 │       └── cpu.wasm            # The C++ CPU compiled to WebAssembly
@@ -83,6 +86,7 @@ Opcode values are defined as constants in the `CPU` class in [`src/cpu.h`](src/c
 │   ├── test_cpu.cpp            # Unit tests for the CPU, loader, and instruction names
 │   ├── test_main.sh            # Integration tests for the interactive emulator
 │   ├── test_web_session.cpp    # Unit tests for the CPU session (native and WebAssembly)
+│   ├── test_assembler.cpp      # Assembler tests that run the assembled code on the CPU
 │   ├── test_web_server.py      # HTTP integration tests for the web server
 │   ├── test_wasm.mjs           # Tests the WebAssembly interface in Node
 │   └── test_frontend.mjs       # Drives the static site in headless Chrome
@@ -135,7 +139,7 @@ The C++ server also serves the same site: `clang++ -std=c++17 -Wall -Wextra src/
 
 ### How the browser talks to the CPU
 
-`web/app.js` loads `generated/cpu.js`, which loads `cpu.wasm`. It calls the functions in `src/wasm_api.cpp` with `ccall`: `cpu_programs`, `cpu_state`, `cpu_load(program, a, b)`, `cpu_step`, `cpu_run`, `cpu_reset`, and `cpu_memory_byte(address)`. Each returns JSON in the same format as the HTTP API, `{"ok":true,"state":{...}}` or `{"ok":false,"error":"..."}`. The state includes registers, flags, all 256 memory bytes, the next instruction, and the trace. Instruction execution happens only in C++ (`src/cpu.h`); JavaScript only displays the state.
+`web/app.js` loads `generated/cpu.js`, which loads `cpu.wasm`. It calls the functions in `src/wasm_api.cpp` with `ccall`: `cpu_programs`, `cpu_state`, `cpu_load(program, a, b)`, `cpu_load_assembly(source)`, `cpu_step`, `cpu_run`, `cpu_reset`, and `cpu_memory_byte(address)`. Each returns JSON in the same format as the HTTP API, `{"ok":true,"state":{...}}` or `{"ok":false,"error":"..."}`. The state includes registers, flags, all 256 memory bytes, the next instruction, and the trace. Instruction execution happens only in C++ (`src/cpu.h`); JavaScript only displays the state.
 
 ### Deploy to Vercel
 
@@ -222,6 +226,82 @@ The emulator prints the final value of register A. For the comparison program, r
 
 You can then run another program (`y`), which resets the CPU first, or exit (`n`). If input ends (EOF), the emulator exits.
 
+## Assembly Editor
+
+The web dashboard has an **Assembly Editor** for writing your own programs. They run on the same C++ CPU (compiled to WebAssembly) as the built-in programs.
+
+1. Write code in the editor, or pick one under **Load an example…**.
+2. Click **Load Program**. The C++ assembler (`src/assembler.h`) turns the code into machine code. The CPU is then reset and the bytes are loaded into memory from address `0x00`. The program menu switches to **Custom (Assembly Editor)**.
+3. Use **Step** or **Run**. The registers, flags, memory, and trace update as with the built-in programs. The editor highlights the line of the next instruction (green), the last instruction after `HALT` (amber), or the instruction that caused a CPU error (red).
+4. **Reset** restarts your program from the beginning with its original memory.
+
+If assembly fails, the errors are listed below the editor with their line numbers, and the line numbers are marked red. Click an error to jump to its line. The program that was loaded before stays loaded, and nothing in the CPU changes. If you edit the code after loading it, the editor tells you to click **Load Program** again.
+
+### Syntax
+
+```asm
+; Count down from 5 to 1 and store each value at address 0xB0.
+
+        LOAD 5          ; A = 5
+loop:   STORE 0xB0      ; memory[0xB0] = A
+        SUB 1           ; A = A - 1
+        JZ done         ; JZ jumps when A is 0
+        JMP loop        ; otherwise repeat
+done:   HALT
+```
+
+- **One statement per line**: an instruction (`MNEMONIC operand`), a `.byte` directive, a label, or nothing.
+- **Comments** start with `;` and run to the end of the line.
+- **Labels** are written as `name:`, either on their own line or before a statement. Names use letters, digits, and `_` and cannot start with a digit. A label marks the address of the next statement. It cannot have the same name as an instruction or be defined twice.
+- **Case**: mnemonics, labels, and `.byte` are not case-sensitive. `load`, `LOAD`, and `Load` are the same instruction, and `Loop` and `loop` are the same label.
+- **Numbers** go from 0 to 255 and can be decimal (`42`), hexadecimal (`0x2A`), or binary (`0b101010`). Negative numbers are not supported. To subtract, use `SUB` (for example, `SUB 1`).
+- **Operands**: each instruction takes either one operand or none, separated by spaces (no commas):
+
+  | Operand | Instructions | Accepts |
+  | --- | --- | --- |
+  | value | `LOAD`, `LOAD_B`, `ADD`, `SUB` | a number 0–255 |
+  | code address | `JMP`, `JZ`, `JE`, `JL`, `JG`, `CALL` | a label, or the number of an address where an instruction or `.byte` data starts in the program |
+  | read address | `LOAD_MEM` | a label or any address 0–255 (the stack can be read) |
+  | write address | `STORE`, `STORE_B` | a label or an address 0–191 (`0x00`–`0xBF`) |
+  | none | `MOV_A_B`, `MOV_B_A`, `ADD_B`, `SUB_B`, `CMP`, `AND`, `OR`, `XOR`, `NOT`, `SHL`, `SHR`, `PUSH`, `POP`, `RET`, `HALT` | — |
+
+- **Data**: `.byte 1, 2, 3` places raw bytes in the program, separated by commas or spaces. With a label (`count: .byte 0`), the data can be used as a variable through `LOAD_MEM count` and `STORE count`.
+
+### How the CPU behaves
+
+These rules come from `src/cpu.h`, and the assembler does not change them:
+
+- `MOV_A_B` copies B into A (A ← B). `MOV_B_A` copies A into B (B ← A).
+- `JZ` jumps when register **A is 0**, whatever the flags say. `JE`, `JL`, and `JG` jump on the Zero, Less, and Greater flags.
+- `CMP` sets all three flags. `ADD`, `SUB`, `ADD_B`, `SUB_B`, `AND`, `OR`, `XOR`, `NOT`, `SHL`, `SHR`, and `POP` set only the Zero flag (from the new value of A), so `JE` after them means "A is 0". `LOAD`, `LOAD_B`, `LOAD_MEM`, and the `MOV` instructions do not change any flags.
+- Arithmetic wraps around in 8 bits (`250 + 10 = 4`, `5 - 7 = 254`).
+- `CALL` stores the 2-byte return address on the stack and `RET` takes it back. `POP` cannot take a value that `CALL` pushed.
+- The program starts at address `0x00`. Code and data can use at most 192 bytes (`0x00`–`0xBF`). Addresses `0xC0`–`0xFF` are reserved for the stack.
+
+### What the assembler checks
+
+The assembler rejects:
+
+- unknown instructions;
+- missing, extra, or comma-separated operands;
+- invalid numbers and numbers outside 0–255;
+- labels used as values (for example `LOAD label`);
+- undefined, duplicate, or invalid labels;
+- jumps outside the program or into the middle of an instruction;
+- `STORE` or `STORE_B` into the stack region;
+- empty programs and programs larger than 192 bytes.
+
+It reports all errors at once, sorted by line. A program without `HALT` loads with a warning, because it can only end with a CPU error.
+
+These problems are found by the CPU while the program runs, as they are for the built-in programs:
+
+- stack overflow and underflow;
+- `RET` without a matching `CALL`;
+- running into an invalid opcode (for example, past the end of the program);
+- running for more than 1,000 instructions with **Run**.
+
+The examples in the editor are a loop, multiplication with data variables, a comparison, and a subroutine with the stack.
+
 ## Testing
 
 ### Run all tests
@@ -237,10 +317,11 @@ This script:
 3. Runs the integration tests in `tests/test_main.sh`
 4. Builds `build/web_server` from `src/web_server.cpp`
 5. Builds and runs the web session unit tests in `tests/test_web_session.cpp`
-6. Rebuilds `web/generated/` and runs `tests/test_cpu.cpp` and `tests/test_web_session.cpp` compiled to WebAssembly in Node. Without Emscripten, it prints `SKIPPED` for these steps and tests the committed module instead
-7. Runs the web server integration tests in `tests/test_web_server.py`
-8. Runs the WebAssembly interface tests in `tests/test_wasm.mjs`
-9. Runs the browser tests in `tests/test_frontend.mjs`
+6. Builds and runs the assembler tests in `tests/test_assembler.cpp`
+7. Rebuilds `web/generated/` and runs `tests/test_cpu.cpp`, `tests/test_web_session.cpp`, and `tests/test_assembler.cpp` compiled to WebAssembly in Node. Without Emscripten, it prints `SKIPPED` for these steps and tests the committed module instead
+8. Runs the web server integration tests in `tests/test_web_server.py`
+9. Runs the WebAssembly interface tests in `tests/test_wasm.mjs`
+10. Runs the browser tests in `tests/test_frontend.mjs`
 
 It can be called from any directory.
 
@@ -287,8 +368,9 @@ clang++ -std=c++17 src/main.cpp -o build/cpu_emulator
 ### Web tests
 
 - [`tests/test_web_session.cpp`](tests/test_web_session.cpp) tests the CPU session directly: the 1,000-instruction limit for runaway programs, CPU faults, reset, and comparison results.
-- [`tests/test_wasm.mjs`](tests/test_wasm.mjs) loads `web/generated/cpu.js` in Node. It checks that all nine programs give the same result as `build/cpu_emulator`, that Step runs one instruction, that Run stops at `HALT`, that Reset restores registers and memory, that all 256 memory bytes are readable, and that invalid inputs are rejected.
-- [`tests/test_frontend.mjs`](tests/test_frontend.mjs) serves `web/` with a plain static server and clicks through the dashboard in headless Chrome. It checks Run, Step, Reset, program changes, input errors, and all nine programs. It also fails on any console error, failed request, or request to `/api/`, and checks the error shown when `cpu.js` or `cpu.wasm` is missing.
+- [`tests/test_assembler.cpp`](tests/test_assembler.cpp) assembles programs and runs them on the CPU. It checks the encoding of every kind of operand, that the comparison program written in assembly produces exactly the bytes of the built-in one, loops, labels, comments, data, `CALL`/`RET`, every error message with its line number, the 192-byte limit, and that the CPU's own errors and instruction limit still apply.
+- [`tests/test_wasm.mjs`](tests/test_wasm.mjs) loads `web/generated/cpu.js` in Node. It checks that all nine programs give the same result as `build/cpu_emulator`, that Step runs one instruction, that Run stops at `HALT`, that Reset restores registers and memory, that all 256 memory bytes are readable, and that invalid inputs are rejected. For `cpu_load_assembly`, it checks error reporting, that a failed assembly leaves the CPU unchanged, the source map, and Step, Run, and Reset with custom code.
+- [`tests/test_frontend.mjs`](tests/test_frontend.mjs) serves `web/` with a plain static server and clicks through the dashboard in headless Chrome. It checks Run, Step, Reset, program changes, input errors, and all nine programs. For the Assembly Editor, it checks every example, Step with the line highlight, memory and trace updates, Reset, error messages and gutter marks, that a failed Load Program keeps the old program, and CPU errors in custom code. It also fails on any console error, failed request, or request to `/api/`, and checks the error shown when `cpu.js` or `cpu.wasm` is missing.
 - [`tests/test_web_server.py`](tests/test_web_server.py) builds and starts `build/web_server` on port 18080 and tests the API over HTTP. It checks that all nine programs give the same result as `build/cpu_emulator`, and covers step and trace data, input validation, malformed requests, local-only access, and missing web files.
 
 ```bash
@@ -296,6 +378,8 @@ mkdir -p build
 clang++ -std=c++17 src/main.cpp -o build/cpu_emulator
 clang++ -std=c++17 -Wall -Wextra tests/test_web_session.cpp -o build/test_web_session
 ./build/test_web_session
+clang++ -std=c++17 -Wall -Wextra tests/test_assembler.cpp -o build/test_assembler
+./build/test_assembler
 python3 tests/test_web_server.py
 node tests/test_wasm.mjs
 node tests/test_frontend.mjs

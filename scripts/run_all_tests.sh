@@ -30,6 +30,11 @@ clang++ -std=c++17 -Wall -Wextra tests/test_web_session.cpp \
 ./build/test_web_session
 
 echo ""
+echo "=== Running assembler unit tests ==="
+clang++ -std=c++17 -Wall -Wextra tests/test_assembler.cpp -o build/test_assembler
+./build/test_assembler
+
+echo ""
 echo "=== Building WebAssembly module ==="
 if command -v em++ > /dev/null; then
     ./scripts/build_wasm.sh
@@ -45,6 +50,12 @@ if command -v em++ > /dev/null; then
     em++ -std=c++17 -O2 -Wall -Wextra -fexceptions tests/test_web_session.cpp \
         -o build/test_web_session_wasm.js
     node build/test_web_session_wasm.js
+
+    echo ""
+    echo "=== Running assembler unit tests compiled to WebAssembly ==="
+    em++ -std=c++17 -O2 -Wall -Wextra -fexceptions tests/test_assembler.cpp \
+        -o build/test_assembler_wasm.js
+    node build/test_assembler_wasm.js
 
     if command -v git > /dev/null && git rev-parse --git-dir > /dev/null 2>&1 &&
         ! git diff --quiet -- web/generated; then

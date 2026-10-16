@@ -35,6 +35,13 @@
     memoryGrid: document.getElementById("memory-grid"),
     traceList: document.getElementById("trace-list"),
     traceCount: document.getElementById("trace-count"),
+    exampleSelect: document.getElementById("example-select"),
+    loadAsmBtn: document.getElementById("load-asm-btn"),
+    asmSource: document.getElementById("asm-source"),
+    editorLines: document.getElementById("editor-lines"),
+    editorHighlight: document.getElementById("editor-highlight"),
+    asmStatus: document.getElementById("asm-status"),
+    asmErrors: document.getElementById("asm-errors"),
   };
 
   let programs = new Map(); // id -> { id, name, needs_b }
@@ -46,6 +53,12 @@
   let inputTimer = null;
   const memoryCells = [];
 
+  // Assembly editor
+  const CUSTOM = "custom"; // program id of code loaded from the editor
+  let assembly = null; // { source, size, warnings, lines: Map address -> line }
+  let asmErrors = []; // errors from the last failed Load Program
+  let editorEdited = false; // the user typed since the last example was inserted
+
   // ------------------------------------------------------------------
   // Helpers
   // ------------------------------------------------------------------
@@ -54,9 +67,10 @@
     Number(value).toString(16).toUpperCase().padStart(digits, "0");
 
   class ApiError extends Error {
-    constructor(message, apiState) {
+    constructor(message, apiState, data) {
       super(message);
       this.state = apiState || null;
+      this.data = data || null; // full response, e.g. assembly errors
     }
   }
 
@@ -93,7 +107,7 @@
     }
 
     if (!data || data.ok !== true) {
-      throw new ApiError((data && data.error) || `${name} failed.`, data && data.state);
+      throw new ApiError((data && data.error) || `${name} failed.`, data && data.state, data);
     }
     return data;
   }
@@ -105,6 +119,8 @@
     load: ({ program, a, b }) =>
       callCpu("cpu_load", ["string", "number", "number"],
         [program, a, b === undefined ? NaN : b]),
+    // Assembles source code and loads it. Fails without changing the CPU.
+    loadAssembly: (source) => callCpu("cpu_load_assembly", ["string"], [source]),
     step: () => callCpu("cpu_step"),
     run: () => callCpu("cpu_run"),
     reset: () => callCpu("cpu_reset"),
@@ -147,6 +163,13 @@
 
   // Returns { request } with a valid program request, or { error }.
   function readControls() {
+    if (el.program.value === CUSTOM) {
+      // Custom code sets its registers itself; Input A and B are not used.
+      el.inputA.classList.remove("invalid");
+      el.inputB.classList.remove("invalid");
+      return { request: { program: CUSTOM } };
+    }
+
     const program = selectedProgram();
     if (!program) return { error: "Select a program." };
 
@@ -175,6 +198,7 @@
   function controlsDiffer(request) {
     if (!state || !state.program) return true;
     const loaded = state.program;
+    if (request.program === CUSTOM) return loaded.id !== CUSTOM;
     return (
       loaded.id !== request.program ||
       loaded.a !== request.a ||
@@ -183,10 +207,14 @@
   }
 
   function updateInputB() {
+    const custom = el.program.value === CUSTOM;
     const program = selectedProgram();
-    const needsB = program ? program.needs_b : true;
+    const needsB = !custom && (program ? program.needs_b : true);
+    el.inputA.disabled = custom;
     el.inputB.disabled = !needsB;
-    el.inputBGroup.title = needsB ? "" : "This program only uses Input A.";
+    el.inputBGroup.title = custom
+      ? "Custom programs set their registers in code."
+      : needsB ? "" : "This program only uses Input A.";
   }
 
   function updateButtons() {
@@ -199,9 +227,12 @@
     el.runBtn.disabled = busy || !canExecute;
     el.stepBtn.disabled = busy || !canExecute;
     el.resetBtn.disabled = busy || !state || !state.program;
+    const custom = el.program.value === CUSTOM;
     el.program.disabled = busy;
-    el.inputA.disabled = busy;
-    el.inputB.disabled = busy || !(selectedProgram() || { needs_b: true }).needs_b;
+    el.inputA.disabled = busy || custom;
+    el.inputB.disabled = busy || custom || !(selectedProgram() || { needs_b: true }).needs_b;
+    el.loadAsmBtn.disabled = busy || !cpu;
+    el.exampleSelect.disabled = busy;
   }
 
   // ------------------------------------------------------------------
@@ -325,6 +356,145 @@
     }
   }
 
+  // ------------------------------------------------------------------
+  // Assembly editor rendering
+  // ------------------------------------------------------------------
+
+  // True when the editor still shows the code that is loaded in the CPU.
+  function editorMatchesCpu() {
+    return Boolean(assembly && state && state.program &&
+      state.program.id === CUSTOM && el.asmSource.value === assembly.source);
+  }
+
+  // The source line to highlight, from the CPU state and the source map:
+  // the next instruction while running, the last one after HALT, or the
+  // failing one after a CPU error. Returns null when it cannot be known.
+  function highlightedLine() {
+    if (!editorMatchesCpu()) return null;
+
+    if (state.next_instruction) {
+      const line = assembly.lines.get(state.next_instruction.address);
+      return line ? { line, kind: "current" } : null;
+    }
+
+    let address = null;
+    const fault = state.error && state.error.match(/CPU fault at address 0x([0-9A-F]{2})/);
+    if (fault) {
+      address = parseInt(fault[1], 16);
+    } else if (state.trace.length) {
+      address = state.trace[state.trace.length - 1].address;
+    }
+    const line = address === null ? undefined : assembly.lines.get(address);
+    if (!line) return null;
+    return { line, kind: state.status === "ERROR" ? "error" : "halted" };
+  }
+
+  function editorMetrics() {
+    const style = getComputedStyle(el.asmSource);
+    return {
+      lineHeight: parseFloat(style.lineHeight) || 20,
+      paddingTop: parseFloat(style.paddingTop) || 0,
+    };
+  }
+
+  // Keeps the line numbers and the highlight aligned with the textarea.
+  function syncEditorScroll() {
+    el.editorLines.style.transform = `translateY(${-el.asmSource.scrollTop}px)`;
+    const highlight = highlightedLine();
+    el.editorHighlight.hidden = !highlight;
+    if (highlight) {
+      const { lineHeight, paddingTop } = editorMetrics();
+      el.editorHighlight.className = `editor-highlight ${highlight.kind}`;
+      el.editorHighlight.style.top =
+        `${paddingTop + (highlight.line - 1) * lineHeight - el.asmSource.scrollTop}px`;
+    }
+  }
+
+  function renderLineNumbers() {
+    const count = el.asmSource.value.split("\n").length;
+    const errorLines = new Set(asmErrors.map((e) => e.line));
+    const highlight = highlightedLine();
+    const fragment = document.createDocumentFragment();
+    for (let line = 1; line <= count; line++) {
+      const number = document.createElement("div");
+      number.textContent = String(line);
+      if (errorLines.has(line)) number.className = "error";
+      else if (highlight && highlight.line === line) number.className = "current";
+      fragment.appendChild(number);
+    }
+    el.editorLines.replaceChildren(fragment);
+  }
+
+  function renderAsmStatus() {
+    let text;
+    let kind = "";
+    if (asmErrors.length) {
+      const count = asmErrors.length;
+      text = `Assembly failed with ${count} ${count === 1 ? "error" : "errors"}. ` +
+        "The previously loaded program is unchanged.";
+      kind = "error";
+    } else if (!assembly) {
+      text = "Not loaded yet. Click Load Program to assemble this code and load it into the CPU.";
+    } else if (!state || !state.program || state.program.id !== CUSTOM) {
+      const name = state && state.program ? state.program.name : "another program";
+      text = `The CPU is running the built-in program "${name}". ` +
+        "Click Load Program to run the code in the editor.";
+    } else if (el.asmSource.value !== assembly.source) {
+      text = "Edited since loading. Click Load Program to assemble the changes.";
+      kind = "warning";
+    } else {
+      const last = hex(assembly.size - 1, 2);
+      text = `Loaded ${assembly.size} ${assembly.size === 1 ? "byte" : "bytes"} ` +
+        `at 0x00–0x${last}.`;
+      kind = "ok";
+      if (assembly.warnings.length) {
+        text += ` Warning: ${assembly.warnings.map((w) => w.message).join(" ")}`;
+        kind = "warning";
+      }
+    }
+    el.asmStatus.textContent = text;
+    el.asmStatus.className = `asm-status ${kind}`;
+
+    el.asmErrors.hidden = asmErrors.length === 0;
+    const fragment = document.createDocumentFragment();
+    for (const error of asmErrors) {
+      const item = document.createElement("li");
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = error.line > 0
+        ? `Line ${error.line}: ${error.message}`
+        : error.message;
+      if (error.line > 0) {
+        button.title = "Go to this line";
+        button.addEventListener("click", () => focusLine(error.line));
+      } else {
+        button.disabled = true;
+      }
+      item.appendChild(button);
+      fragment.appendChild(item);
+    }
+    el.asmErrors.replaceChildren(fragment);
+  }
+
+  function renderEditor() {
+    renderLineNumbers();
+    renderAsmStatus();
+    syncEditorScroll();
+  }
+
+  // Selects a source line and scrolls it into view.
+  function focusLine(line) {
+    const lines = el.asmSource.value.split("\n");
+    let start = 0;
+    for (let i = 0; i < line - 1 && i < lines.length; i++) start += lines[i].length + 1;
+    const end = start + (lines[line - 1] || "").length;
+    el.asmSource.focus();
+    el.asmSource.setSelectionRange(start, end);
+    const { lineHeight } = editorMetrics();
+    el.asmSource.scrollTop = Math.max(0, (line - 1) * lineHeight - el.asmSource.clientHeight / 3);
+    syncEditorScroll();
+  }
+
   function render(s) {
     state = s;
 
@@ -350,6 +520,7 @@
 
     renderMemory(s);
     renderTrace(s.trace, s.steps);
+    renderEditor();
     updateButtons();
   }
 
@@ -364,6 +535,10 @@
       showMessage(controls.error);
       updateButtons();
       return Promise.resolve(false);
+    }
+
+    if (controls.request.program === CUSTOM) {
+      return Promise.resolve(loadAssembly());
     }
 
     const promise = Promise.resolve()
@@ -385,6 +560,35 @@
 
     pendingLoad = promise;
     return promise;
+  }
+
+  // Assembles the editor's code and loads it into the CPU. If assembly fails,
+  // the errors are shown and the loaded program stays as it was.
+  function loadAssembly() {
+    const source = el.asmSource.value;
+    try {
+      const data = cpuApi.loadAssembly(source);
+      const lines = new Map();
+      for (const entry of data.assembly.source_map) {
+        if (entry.instruction) lines.set(entry.address, entry.line);
+      }
+      assembly = { source, size: data.assembly.size, warnings: data.assembly.warnings, lines };
+      asmErrors = [];
+      el.program.value = CUSTOM;
+      updateInputB();
+      clearMessage();
+      render(data.state);
+      return true;
+    } catch (error) {
+      const details = error.data && error.data.assembly;
+      asmErrors = details ? details.errors : [{ line: 0, message: error.message }];
+      // Show the program that is still loaded in the dropdown.
+      if (state && state.program) el.program.value = state.program.id;
+      updateInputB();
+      renderEditor();
+      updateButtons();
+      return false;
+    }
   }
 
   // Makes sure the CPU runs the program shown in the controls.
@@ -445,8 +649,52 @@
   function onProgramChange() {
     clearTimeout(inputTimer);
     updateInputB();
+    if (el.program.value === CUSTOM) {
+      onLoadAssembly();
+      return;
+    }
     renderTrace([], 0); // old trace no longer applies
     loadProgram();
+  }
+
+  function onLoadAssembly() {
+    runAction(async () => {
+      if (pendingLoad) await pendingLoad;
+      loadAssembly();
+    });
+  }
+
+  function onEditorInput() {
+    editorEdited = true;
+    renderEditor();
+  }
+
+  function onExampleChange() {
+    const example = (typeof ASM_EXAMPLES === "undefined" ? [] : ASM_EXAMPLES)
+      .find((e) => e.id === el.exampleSelect.value);
+    el.exampleSelect.value = "";
+    if (!example) return;
+    if (editorEdited && el.asmSource.value.trim() !== "" &&
+        !window.confirm(`Replace the code in the editor with "${example.name}"?`)) {
+      return;
+    }
+    el.asmSource.value = example.source;
+    el.asmSource.scrollTop = 0;
+    editorEdited = false;
+    asmErrors = [];
+    renderEditor();
+  }
+
+  function setUpEditor() {
+    const examples = typeof ASM_EXAMPLES === "undefined" ? [] : ASM_EXAMPLES;
+    for (const example of examples) {
+      const option = document.createElement("option");
+      option.value = example.id;
+      option.textContent = example.name;
+      el.exampleSelect.appendChild(option);
+    }
+    if (examples.length && !el.asmSource.value) el.asmSource.value = examples[0].source;
+    renderEditor();
   }
 
   function onInputChange() {
@@ -469,6 +717,7 @@
 
   async function init() {
     buildMemoryGrid();
+    setUpEditor();
     busy = true;
     updateButtons();
 
@@ -496,6 +745,10 @@
   el.runBtn.addEventListener("click", onRun);
   el.stepBtn.addEventListener("click", onStep);
   el.resetBtn.addEventListener("click", onReset);
+  el.loadAsmBtn.addEventListener("click", onLoadAssembly);
+  el.exampleSelect.addEventListener("change", onExampleChange);
+  el.asmSource.addEventListener("input", onEditorInput);
+  el.asmSource.addEventListener("scroll", syncEditorScroll);
 
   init();
 })();

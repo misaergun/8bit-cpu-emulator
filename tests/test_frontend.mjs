@@ -101,6 +101,7 @@ class Page {
     this.problems = [];
     this.requests = [];
     this.responses = [];
+    this.dialogs = [];
     this.ws.addEventListener("message", (event) => this.onMessage(JSON.parse(event.data)));
   }
 
@@ -138,6 +139,10 @@ class Page {
         break;
       case "Network.loadingFailed":
         this.problems.push(`network: ${p.errorText}`);
+        break;
+      case "Page.javascriptDialogOpening":
+        this.dialogs.push(p.message);
+        this.send("Page.handleJavaScriptDialog", { accept: true });
         break;
     }
   }
@@ -180,6 +185,37 @@ class Page {
   set(id, value, eventName) {
     return this.eval(`(() => { const e = document.getElementById(${JSON.stringify(id)});
       e.value = ${JSON.stringify(value)}; e.dispatchEvent(new Event(${JSON.stringify(eventName)})); })()`);
+  }
+
+  // Replaces the editor text as if the user typed it.
+  type(source) {
+    return this.set("asm-source", source, "input");
+  }
+
+  editor() {
+    return this.eval(`(() => {
+      const t = (id) => document.getElementById(id).textContent;
+      const h = document.getElementById("editor-highlight");
+      const area = document.getElementById("asm-source");
+      const lineHeight = parseFloat(getComputedStyle(area).lineHeight);
+      const padding = parseFloat(getComputedStyle(area).paddingTop);
+      return {
+        source: area.value,
+        status: t("asm-status"),
+        statusKind: document.getElementById("asm-status").className.replace("asm-status", "").trim(),
+        errors: [...document.querySelectorAll("#asm-errors li")].map((li) => li.textContent),
+        errorLines: [...document.querySelectorAll("#editor-lines .error")].map((d) => Number(d.textContent)),
+        currentLine: Number(document.querySelector("#editor-lines .current")?.textContent ?? 0),
+        highlight: h.hidden ? null : {
+          kind: h.className.replace("editor-highlight", "").trim(),
+          line: Math.round((parseFloat(h.style.top) - padding + area.scrollTop) / lineHeight) + 1,
+        },
+        program: document.getElementById("program").value,
+        inputADisabled: document.getElementById("input-a").disabled,
+        examples: [...document.querySelectorAll("#example-select option")].map((o) => o.value),
+        selection: area.selectionStart,
+      };
+    })()`);
   }
 
   snapshot() {
@@ -308,6 +344,189 @@ await page.click("run-btn");
 await page.waitFor(statusIs("HALTED"));
 s = await page.snapshot();
 check(s.message === null && s.result === "Register A = 4 (0x04)", "Fixed input runs (250 + 10 wraps to 4)");
+
+// ---------------------------------------------------------------------------
+// Assembly editor
+// ---------------------------------------------------------------------------
+
+const EXAMPLES = await page.eval("ASM_EXAMPLES.map((e) => ({ id: e.id, expectedA: e.expectedA }))");
+let e = await page.editor();
+check(e.examples.join() === ["", ...EXAMPLES.map((x) => x.id)].join() && EXAMPLES.length === 4,
+  "Example menu lists the 4 examples");
+check(e.source.startsWith("; Count down") && e.status.startsWith("Not loaded yet"),
+  "Editor starts with the first example, not yet loaded", e.status);
+
+const loadAsm = async () => {
+  const before = await page.eval(`document.getElementById("cpu-status").textContent`);
+  await page.click("load-asm-btn");
+  await sleep(150);
+  return before;
+};
+
+for (const example of EXAMPLES) {
+  await page.set("example-select", example.id, "change");
+  await loadAsm();
+  await page.waitFor(statusIs("READY"));
+  e = await page.editor();
+  await page.click("run-btn");
+  await page.waitFor(statusIs("HALTED"));
+  s = await page.snapshot();
+  check(e.program === "custom" && e.inputADisabled && e.statusKind === "ok" &&
+    parseInt(s.regA, 16) === example.expectedA && s.trace.length > 0,
+    `Example "${example.id}" loads and runs on the WASM CPU (A = ${example.expectedA})`,
+    JSON.stringify({ program: e.program, status: e.status, regA: s.regA }));
+}
+
+// Step through the countdown example and follow the highlight.
+await page.set("example-select", "countdown", "change");
+await loadAsm();
+await page.waitFor(statusIs("READY"));
+e = await page.editor();
+s = await page.snapshot();
+check(e.highlight?.kind === "current" && e.highlight.line === 4 && e.currentLine === 4 &&
+  s.memory.slice(0, 4).join(" ") === "01 05 07 B0" && s.regions.startsWith("c".repeat(11) + "d"),
+  "Load Program puts the machine code in memory and highlights line 4 (LOAD 5)",
+  JSON.stringify({ highlight: e.highlight, memory: s.memory.slice(0, 4), regions: s.regions.slice(0, 14) }));
+const loadedMemory = s.memory;
+
+await page.click("step-btn");
+await page.waitFor(`document.querySelectorAll(".trace-entry").length === 1`);
+e = await page.editor();
+s = await page.snapshot();
+check(s.regA === "05" && s.pc === "0002" && s.trace[0] === "LOAD 5" && e.highlight?.line === 5,
+  "Step runs one instruction: A = 5, PC = 2, highlight moves to line 5", JSON.stringify(e.highlight));
+
+await page.click("step-btn");
+await page.waitFor(`document.querySelectorAll(".trace-entry").length === 2`);
+s = await page.snapshot();
+e = await page.editor();
+check(s.memory[0xB0] === "05" && s.trace[1] === "STORE 0xB0" && e.highlight?.line === 6,
+  "STORE writes memory[0xB0] = 05 and the trace shows it", JSON.stringify({ b0: s.memory[0xB0] }));
+
+await page.click("run-btn");
+await page.waitFor(statusIs("HALTED"));
+s = await page.snapshot();
+e = await page.editor();
+check(s.regA === "00" && s.memory[0xB0] === "01" && s.traceCount === "21 instructions" &&
+  s.flags === "100" && e.highlight?.kind === "halted" && e.highlight.line === 9,
+  "Run finishes the loop: 21 instructions, A = 0, Zero flag set, HALT line highlighted",
+  JSON.stringify({ regA: s.regA, b0: s.memory[0xB0], count: s.traceCount, h: e.highlight }));
+
+await page.click("reset-btn");
+await page.waitFor(statusIs("READY"));
+s = await page.snapshot();
+e = await page.editor();
+check(s.trace.length === 0 && s.regA === "00" && s.pc === "0000" &&
+  s.memory.join() === loadedMemory.join() && e.highlight?.line === 4 && e.program === "custom",
+  "Reset restarts the custom program with its original memory");
+
+// Editing after loading
+await page.type(e.source.replace("LOAD 5", "LOAD 3"));
+e = await page.editor();
+check(e.statusKind === "warning" && e.status.startsWith("Edited since loading") && e.highlight === null,
+  "Editing marks the loaded code as out of date and hides the highlight");
+await loadAsm();
+await page.click("run-btn");
+await page.waitFor(statusIs("HALTED"));
+s = await page.snapshot();
+check(s.traceCount === "13 instructions", "Load Program applies the edit (LOAD 3 loops 3 times)", s.traceCount);
+
+// Assembly errors keep the loaded program.
+const haltedState = await page.snapshot();
+await page.type("LOAD 5\nLAOD 1\nJMP nowhere\nHALT");
+await loadAsm();
+e = await page.editor();
+s = await page.snapshot();
+check(e.errors.join("|") === "Line 2: Unknown instruction 'LAOD'|Line 3: Undefined label 'nowhere'" &&
+  e.errorLines.join() === "2,3" && e.statusKind === "error",
+  "Assembly errors are listed with line numbers and marked in the gutter", JSON.stringify(e.errors));
+check(s.status === "HALTED" && s.traceCount === haltedState.traceCount &&
+  s.memory.join() === haltedState.memory.join() && e.program === "custom",
+  "Failed assembly leaves the loaded program and CPU state unchanged");
+
+await page.eval(`document.querySelector("#asm-errors button").click()`);
+e = await page.editor();
+check(e.selection === "LOAD 5\n".length, "Clicking an error selects that line in the editor", String(e.selection));
+
+await page.set("program", "addition", "change");
+await page.waitFor(statusIs("READY"));
+await loadAsm();
+e = await page.editor();
+s = await page.snapshot();
+check(e.program === "addition" && s.status === "READY" && s.next === "@00 LOAD 250",
+  "Failed assembly while a built-in is loaded keeps the built-in program", JSON.stringify(s.next));
+check(e.status.startsWith("Assembly failed with 2 errors"), "Status explains the failure", e.status);
+
+for (const [source, expected, label] of [
+  ["", "Program is empty", "empty program"],
+  ["LOAD 1\n".repeat(97), "reserved for the stack", "program larger than 192 bytes"],
+  ["STORE 0xC0\nHALT", "Line 1: STORE address 0xC0 is in the stack region", "write into the stack region"],
+  ["LOAD 256\nHALT", "Line 1: Value 256 is out of range", "out-of-range value"],
+  ["a: HALT\na: HALT", "Line 2: Duplicate label 'a'", "duplicate label"],
+  ["HALT 1", "Line 1: HALT does not take an operand", "extra operand"],
+]) {
+  await page.type(source);
+  await loadAsm();
+  e = await page.editor();
+  check(e.errors.some((x) => x.includes(expected)) && e.program === "addition",
+    `Rejected in the editor: ${label}`, JSON.stringify(e.errors));
+}
+
+// Choosing "Custom" in the program menu assembles the editor's code.
+await page.type("LOAD 7\nLOAD_B 6\nADD_B\nHALT");
+await page.set("program", "custom", "change");
+await page.waitFor(`document.getElementById("cpu-next").textContent === "@00 LOAD 7"`);
+await page.click("run-btn");
+await page.waitFor(statusIs("HALTED"));
+s = await page.snapshot();
+e = await page.editor();
+check(e.program === "custom" && s.regA === "0D" && s.regB === "06" && e.errors.length === 0,
+  "Selecting Custom in the program menu loads the editor code (7 + 6 = 13)");
+
+// CPU errors and the instruction limit still come from the C++ CPU.
+await page.type("LOAD 1\nPOP\nHALT");
+await loadAsm();
+await page.click("step-btn");
+await page.click("step-btn");
+await page.waitFor(statusIs("ERROR"));
+s = await page.snapshot();
+e = await page.editor();
+check(s.message?.includes("Stack underflow") && e.highlight?.kind === "error" && e.highlight.line === 2,
+  "A CPU error (POP on an empty stack) is shown and its line is highlighted",
+  JSON.stringify({ message: s.message, h: e.highlight }));
+
+await page.type("loop: JMP loop");
+await loadAsm();
+await page.click("run-btn");
+await page.waitFor(statusIs("ERROR"));
+s = await page.snapshot();
+check(s.message?.includes("Instruction limit reached (1000") && s.traceCount === "1000 instructions",
+  "An infinite loop stops at the 1000-instruction limit", s.message);
+
+await page.type("LOAD 1");
+await loadAsm();
+e = await page.editor();
+check(e.statusKind === "warning" && e.status.includes("no HALT"), "Missing HALT shows a warning", e.status);
+
+// Replacing edited code with an example asks first.
+await page.type("LOAD 99\nHALT");
+await page.set("example-select", "compare", "change");
+e = await page.editor();
+check(page.dialogs.length === 1 && e.source.startsWith("; Compare"),
+  "Choosing an example after editing asks for confirmation", JSON.stringify(page.dialogs));
+
+// Built-in programs still work after custom code.
+await page.set("program", "subtraction", "change");
+await page.waitFor(statusIs("READY"));
+await page.set("input-a", "10", "input");
+await page.set("input-b", "4", "input");
+await page.click("run-btn");
+await page.waitFor(statusIs("HALTED"));
+s = await page.snapshot();
+e = await page.editor();
+check(s.result === "Register A = 6 (0x06)" && !s.bDisabled && e.highlight === null &&
+  e.status.startsWith("The CPU is running the built-in program"),
+  "Built-in programs still work after custom code", s.result);
 
 // Network and console
 const apiRequests = page.requests.filter((url) => url.includes("/api/"));

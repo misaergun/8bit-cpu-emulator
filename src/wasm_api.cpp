@@ -12,6 +12,7 @@
 #include <exception>
 #include <string>
 
+#include "assembler.h"
 #include "emulator_session.h"
 
 #ifdef __EMSCRIPTEN__
@@ -26,6 +27,9 @@ namespace
 
 EmulatorSession session;
 std::string response;
+
+// Program shown in the UI for code loaded from the assembly editor.
+const ProgramInfo custom_program{"custom", "Custom Program", false};
 
 const char *reply(std::string text)
 {
@@ -46,6 +50,19 @@ bool read_byte(double value, const char *name, uint8_t &out, std::string &error)
     }
     out = static_cast<uint8_t>(value);
     return true;
+}
+
+void write_messages(std::ostream &out, const std::vector<AssemblyMessage> &list)
+{
+    out << '[';
+    for (size_t i = 0; i < list.size(); ++i)
+    {
+        if (i > 0)
+            out << ',';
+        out << "{\"line\":" << list[i].line
+            << ",\"message\":" << json_escape(list[i].text) << '}';
+    }
+    out << ']';
 }
 
 } // namespace
@@ -108,6 +125,61 @@ WASM_EXPORT const char *cpu_load(const char *program_id, double a, double b)
     {
         return reply(error_envelope(
             std::string("Could not load program: ") + e.what()));
+    }
+}
+
+// Assembles source code and, if it has no errors, resets the CPU and loads
+// the machine code. On errors the loaded program is left unchanged.
+// Success: {"ok":true,"state":{...},"assembly":{"size":N,"warnings":[...],
+//           "source_map":[{"line":L,"address":A,"size":S,"instruction":true}]}}
+// Failure: {"ok":false,"error":"...","assembly":{"errors":[{"line":L,
+//           "message":"..."}],"warnings":[...]}}
+WASM_EXPORT const char *cpu_load_assembly(const char *source)
+{
+    try
+    {
+        AssemblyResult result = assemble(source == nullptr ? "" : source);
+        std::ostringstream out;
+
+        if (!result.ok)
+        {
+            size_t count = result.errors.size();
+            out << "{\"ok\":false,\"error\":"
+                << json_escape("Assembly failed with " + std::to_string(count) +
+                               (count == 1 ? " error." : " errors."))
+                << ",\"assembly\":{\"errors\":";
+            write_messages(out, result.errors);
+            out << ",\"warnings\":";
+            write_messages(out, result.warnings);
+            out << "}}";
+            return reply(out.str());
+        }
+
+        session.load_bytes(custom_program, result.bytes, 0, 0);
+
+        out << "{\"ok\":true,\"state\":";
+        session.write_json(out);
+        out << ",\"assembly\":{\"size\":" << result.bytes.size()
+            << ",\"warnings\":";
+        write_messages(out, result.warnings);
+        out << ",\"source_map\":[";
+        for (size_t i = 0; i < result.source_map.size(); ++i)
+        {
+            const SourceMapEntry &entry = result.source_map[i];
+            if (i > 0)
+                out << ',';
+            out << "{\"line\":" << entry.line
+                << ",\"address\":" << entry.address
+                << ",\"size\":" << entry.size
+                << ",\"instruction\":" << json_bool(entry.is_instruction) << '}';
+        }
+        out << "]}}";
+        return reply(out.str());
+    }
+    catch (const std::exception &e)
+    {
+        return reply(error_envelope(std::string("Could not load program: ") +
+                                    e.what()));
     }
 }
 

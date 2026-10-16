@@ -18,7 +18,7 @@ fi
 OUT_DIR="web/generated"
 mkdir -p "$OUT_DIR"
 
-EXPORTS="_cpu_programs,_cpu_state,_cpu_load,_cpu_step,_cpu_run,_cpu_reset,_cpu_memory_byte"
+EXPORTS="_cpu_programs,_cpu_state,_cpu_load,_cpu_load_assembly,_cpu_step,_cpu_run,_cpu_reset,_cpu_memory_byte"
 
 # -fexceptions: cpu.h reports CPU faults by throwing, and the session
 #               catches them, so C++ exceptions must work in WebAssembly.

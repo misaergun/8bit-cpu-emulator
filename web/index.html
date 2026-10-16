@@ -47,6 +47,7 @@
             <option value="not">Bitwise NOT</option>
             <option value="shl">Shift Left (SHL)</option>
             <option value="shr">Shift Right (SHR)</option>
+            <option value="custom">Custom (Assembly Editor)</option>
           </select>
         </div>
         <div>
@@ -65,6 +66,55 @@
       </section>
 
       <p id="message" class="message" role="alert" hidden></p>
+
+      <section class="panel editor-panel" aria-labelledby="editor-title">
+        <div class="panel-heading">
+          <div>
+            <h3 id="editor-title">Assembly Editor</h3>
+            <span class="muted">Write a program, then Load Program and use Step or Run.</span>
+          </div>
+          <div class="editor-toolbar">
+            <select id="example-select" aria-label="Load an example program">
+              <option value="">Load an example…</option>
+            </select>
+            <button id="load-asm-btn" class="primary">Load Program</button>
+          </div>
+        </div>
+
+        <div class="editor">
+          <div class="editor-gutter" aria-hidden="true">
+            <div id="editor-lines"></div>
+          </div>
+          <div class="editor-body">
+            <div id="editor-highlight" class="editor-highlight" hidden></div>
+            <textarea
+              id="asm-source"
+              aria-label="Assembly source code"
+              spellcheck="false"
+              autocomplete="off"
+              autocapitalize="off"
+              wrap="off"
+            ></textarea>
+          </div>
+        </div>
+
+        <p id="asm-status" class="asm-status" role="status"></p>
+        <ul id="asm-errors" class="asm-errors" hidden></ul>
+
+        <details class="asm-help">
+          <summary>Assembly syntax</summary>
+          <ul>
+            <li><code>label:</code> names an address; use it in <code>JMP</code>, <code>JZ</code>, <code>JE</code>, <code>JL</code>, <code>JG</code>, <code>CALL</code>, <code>LOAD_MEM</code>, <code>STORE</code>, <code>STORE_B</code>.</li>
+            <li><code>; text</code> is a comment. Mnemonics and labels are not case-sensitive.</li>
+            <li>Numbers 0–255: <code>42</code>, <code>0x2A</code> or <code>0b101010</code>. <code>.byte 1, 2, 3</code> stores raw data.</li>
+            <li>Value operand: <code>LOAD</code>, <code>LOAD_B</code>, <code>ADD</code>, <code>SUB</code>.
+              Address operand: the jumps, <code>CALL</code>, <code>LOAD_MEM</code>, <code>STORE</code>, <code>STORE_B</code>.
+              No operand: <code>MOV_A_B</code> (A←B), <code>MOV_B_A</code> (B←A), <code>ADD_B</code>, <code>SUB_B</code>, <code>CMP</code>, <code>AND</code>, <code>OR</code>, <code>XOR</code>, <code>NOT</code>, <code>SHL</code>, <code>SHR</code>, <code>PUSH</code>, <code>POP</code>, <code>RET</code>, <code>HALT</code>.</li>
+            <li><code>JZ</code> jumps when A is 0. <code>JE</code>/<code>JL</code>/<code>JG</code> use the flags set by <code>CMP</code>.</li>
+            <li>Code and data use addresses 0x00–0xBF (192 bytes). 0xC0–0xFF is the stack.</li>
+          </ul>
+        </details>
+      </section>
 
       <section class="section">
         <div class="section-heading">
@@ -155,6 +205,7 @@
     </main>
 
     <script src="generated/cpu.js"></script>
+    <script src="examples.js"></script>
     <script src="app.js"></script>
   </body>
 </html>

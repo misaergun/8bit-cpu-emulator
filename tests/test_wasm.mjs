@@ -203,6 +203,58 @@ check(r.ok && r.state.program.b === null, "Unary program accepted without b");
 r = load("shl", 12, 999);
 check(r.ok, "Unary program ignores b");
 
+// ---------------------------------------------------------------------------
+// Assembly loading (cpu_load_assembly)
+// ---------------------------------------------------------------------------
+
+const asm = (source) => call("cpu_load_assembly", source);
+
+load("addition", 10, 5);
+const builtinState = call("cpu_state").state;
+r = asm("LOAD 1\nLAOD 2\nJMP missing\nHALT");
+check(!r.ok && r.error === "Assembly failed with 2 errors." && !("state" in r) &&
+  JSON.stringify(r.assembly.errors) === JSON.stringify([
+    { line: 2, message: "Unknown instruction 'LAOD'" },
+    { line: 3, message: "Undefined label 'missing'" }]),
+  "cpu_load_assembly reports errors with line numbers");
+check(JSON.stringify(call("cpu_state").state) === JSON.stringify(builtinState),
+  "Failed assembly does not change the loaded program or CPU state");
+
+r = asm("start:  LOAD 40   ; comment\n        ADD 2\n        HALT\n");
+check(r.ok && r.state.program.id === "custom" && r.state.status === "READY" &&
+  r.state.layout.code_size === 5 && r.state.memory.slice(0, 6).join() === "1,40,2,2,255,0",
+  "Valid assembly is loaded into memory and the CPU is reset");
+check(JSON.stringify(r.assembly.source_map) === JSON.stringify([
+  { line: 1, address: 0, size: 2, instruction: true },
+  { line: 2, address: 2, size: 2, instruction: true },
+  { line: 3, address: 4, size: 1, instruction: true }]) && r.assembly.warnings.length === 0,
+  "Source map links each instruction to its source line");
+s = call("cpu_step").state;
+check(s.steps === 1 && s.registers.a === 40 && s.registers.pc === 2, "Step runs one custom instruction");
+s = call("cpu_run").state;
+check(s.status === "HALTED" && s.result.text === "Register A = 42 (0x2A)" && s.trace.length === 3,
+  "Run finishes the custom program");
+s = call("cpu_reset").state;
+check(s.status === "READY" && s.program.id === "custom" && s.registers.a === 0 &&
+  s.memory.slice(0, 5).join() === "1,40,2,2,255", "Reset restarts the custom program");
+
+r = asm("loop: JMP loop");
+check(r.ok && r.assembly.warnings.length === 1, "Program without HALT loads with a warning");
+r = call("cpu_run");
+check(!r.ok && r.error.includes("Instruction limit reached") && r.state.steps === 1000,
+  "Custom infinite loop stops at the instruction limit");
+
+for (const [source, label] of [["", "empty source"], ["; nothing", "comments only"],
+  ["LOAD 1\n".repeat(100), "too large"], ["STORE 200\nHALT", "stack write"],
+  ["\u0000\u0001", "control characters"]]) {
+  r = asm(source);
+  check(!r.ok && r.assembly.errors.length > 0, `cpu_load_assembly rejects ${label}`);
+}
+check(call("cpu_state").state.program.id === "custom", "Rejected programs leave the custom program loaded");
+
+load("comparison", 3, 9);
+check(call("cpu_run").state.result.text === "A < B", "Built-in programs still work after custom code");
+
 if (failures) {
   console.log(`\n${failures} WASM test(s) failed.`);
   process.exit(1);
