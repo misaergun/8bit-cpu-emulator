@@ -42,6 +42,17 @@
     editorHighlight: document.getElementById("editor-highlight"),
     asmStatus: document.getElementById("asm-status"),
     asmErrors: document.getElementById("asm-errors"),
+    modeBuiltin: document.getElementById("mode-builtin"),
+    modeCustom: document.getElementById("mode-custom"),
+    builtinPanel: document.getElementById("builtin-panel"),
+    editorPanel: document.getElementById("editor-panel"),
+    builtinActions: document.getElementById("builtin-actions"),
+    editorActions: document.getElementById("editor-actions"),
+    runControls: document.getElementById("run-controls"),
+    programDescription: document.getElementById("program-description"),
+    cpuProgram: document.getElementById("cpu-program"),
+    cpuSteps: document.getElementById("cpu-steps"),
+    cpuLast: document.getElementById("cpu-last"),
   };
 
   let programs = new Map(); // id -> { id, name, needs_b }
@@ -58,6 +69,7 @@
   let assembly = null; // { source, size, warnings, lines: Map address -> line }
   let asmErrors = []; // errors from the last failed Load Program
   let editorEdited = false; // the user typed since the last example was inserted
+  let lastBuiltin = "comparison"; // built-in program to return to from Custom mode
 
   // ------------------------------------------------------------------
   // Helpers
@@ -215,6 +227,26 @@
     el.inputBGroup.title = custom
       ? "Custom programs set their registers in code."
       : needsB ? "" : "This program only uses Input A.";
+    renderMode();
+  }
+
+  // The program menu decides the mode: "custom" shows the Assembly Editor,
+  // any other value shows the built-in program panel.
+  function renderMode() {
+    const custom = el.program.value === CUSTOM;
+    if (!custom) lastBuiltin = el.program.value;
+
+    el.builtinPanel.hidden = custom;
+    el.editorPanel.hidden = !custom;
+    el.modeBuiltin.setAttribute("aria-selected", String(!custom));
+    el.modeCustom.setAttribute("aria-selected", String(custom));
+
+    // There is one set of Run/Step/Reset buttons; show it in the active panel.
+    const actions = custom ? el.editorActions : el.builtinActions;
+    if (el.runControls.parentElement !== actions) actions.appendChild(el.runControls);
+
+    const option = el.program.selectedOptions[0];
+    el.programDescription.textContent = (option && option.dataset.description) || "";
   }
 
   function updateButtons() {
@@ -233,6 +265,8 @@
     el.inputB.disabled = busy || custom || !(selectedProgram() || { needs_b: true }).needs_b;
     el.loadAsmBtn.disabled = busy || !cpu;
     el.exampleSelect.disabled = busy;
+    el.modeBuiltin.disabled = busy;
+    el.modeCustom.disabled = busy;
   }
 
   // ------------------------------------------------------------------
@@ -495,6 +529,14 @@
     syncEditorScroll();
   }
 
+  function describeProgram(program) {
+    if (!program) return "None";
+    if (program.id === CUSTOM) return `Custom code (${program.size} bytes)`;
+    return program.needs_b
+      ? `${program.name} (A = ${program.a}, B = ${program.b})`
+      : `${program.name} (A = ${program.a})`;
+  }
+
   function render(s) {
     state = s;
 
@@ -510,7 +552,14 @@
     setFlag(el.flagGreater, s.flags.greater);
 
     el.cpuStatus.textContent = s.status;
-    el.cpuStatus.className = `status-${s.status.toLowerCase()}`;
+    el.cpuStatus.className = `status-pill status-${s.status.toLowerCase()}`;
+
+    el.cpuProgram.textContent = describeProgram(s.program);
+    el.cpuSteps.textContent = String(s.steps);
+    const last = s.trace.length ? s.trace[s.trace.length - 1] : null;
+    el.cpuLast.textContent = last
+      ? `@${hex(last.address, 2)} ${formatInstruction(last.name, last.operand)}`
+      : "—";
 
     const next = s.next_instruction;
     el.cpuNext.textContent = next
@@ -582,8 +631,8 @@
     } catch (error) {
       const details = error.data && error.data.assembly;
       asmErrors = details ? details.errors : [{ line: 0, message: error.message }];
-      // Show the program that is still loaded in the dropdown.
-      if (state && state.program) el.program.value = state.program.id;
+      // Stay in Custom mode so the errors can be fixed. The CPU keeps the
+      // program it had, which the CPU State panel shows.
       updateInputB();
       renderEditor();
       updateButtons();
@@ -657,6 +706,13 @@
     loadProgram();
   }
 
+  function onModeTab(custom) {
+    const target = custom ? CUSTOM : lastBuiltin;
+    if (busy || el.program.value === target) return;
+    el.program.value = target;
+    onProgramChange();
+  }
+
   function onLoadAssembly() {
     runAction(async () => {
       if (pendingLoad) await pendingLoad;
@@ -718,6 +774,7 @@
   async function init() {
     buildMemoryGrid();
     setUpEditor();
+    renderMode();
     busy = true;
     updateButtons();
 
@@ -746,6 +803,8 @@
   el.stepBtn.addEventListener("click", onStep);
   el.resetBtn.addEventListener("click", onReset);
   el.loadAsmBtn.addEventListener("click", onLoadAssembly);
+  el.modeBuiltin.addEventListener("click", () => onModeTab(false));
+  el.modeCustom.addEventListener("click", () => onModeTab(true));
   el.exampleSelect.addEventListener("change", onExampleChange);
   el.asmSource.addEventListener("input", onEditorInput);
   el.asmSource.addEventListener("scroll", syncEditorScroll);

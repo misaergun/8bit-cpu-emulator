@@ -3,18 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>8-Bit CPU Emulator</title>
+    <title>8-bit CPU Emulator</title>
     <link rel="icon" href="data:," />
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <header class="topbar">
       <div class="brand">
-        <span class="brand-icon">8</span>
-        <div>
-          <h1>8-Bit CPU Emulator</h1>
-          <p>CPU ARCHITECTURE LAB</p>
-        </div>
+        <span class="brand-icon" aria-hidden="true">8</span>
+        <h1>8-bit CPU Emulator</h1>
       </div>
       <div id="server-status" class="server-status">
         <span class="status-dot"></span>
@@ -25,178 +22,192 @@
     <main>
       <section class="page-heading">
         <div>
-          <p class="eyebrow">EMULATOR / DASHBOARD</p>
-          <h2>Processor Overview</h2>
-          <p class="subtitle">
-            Explore registers, memory and instruction execution.
-          </p>
+          <h2>CPU Workspace</h2>
+          <p class="subtitle">Write, execute and inspect your programs.</p>
         </div>
-        <div class="architecture-tag">8-BIT · 256 BYTE MEMORY</div>
+        <span class="architecture-tag">8-bit · 256 bytes</span>
       </section>
 
-      <section class="controls panel">
-        <div>
-          <label for="program">PROGRAM</label>
-          <select id="program">
-            <option value="comparison">Comparison</option>
-            <option value="addition">Addition</option>
-            <option value="subtraction">Subtraction</option>
-            <option value="and">Bitwise AND</option>
-            <option value="or">Bitwise OR</option>
-            <option value="xor">Bitwise XOR</option>
-            <option value="not">Bitwise NOT</option>
-            <option value="shl">Shift Left (SHL)</option>
-            <option value="shr">Shift Right (SHR)</option>
-            <option value="custom">Custom (Assembly Editor)</option>
-          </select>
-        </div>
-        <div>
-          <label for="input-a">INPUT A</label>
-          <input id="input-a" type="number" min="0" max="255" value="10" />
-        </div>
-        <div id="input-b-group">
-          <label for="input-b">INPUT B</label>
-          <input id="input-b" type="number" min="0" max="255" value="5" />
-        </div>
-        <div class="control-buttons">
-          <button id="run-btn" class="primary">▶ Run</button>
-          <button id="step-btn">Step →</button>
-          <button id="reset-btn">↺ Reset</button>
-        </div>
-      </section>
+      <nav class="mode-tabs" role="tablist" aria-label="Program source">
+        <button id="mode-builtin" type="button" role="tab" aria-selected="true" aria-controls="builtin-panel">
+          <strong>Built-in Programs</strong>
+          <span>Choose an operation and enter numbers</span>
+        </button>
+        <button id="mode-custom" type="button" role="tab" aria-selected="false" aria-controls="editor-panel">
+          <strong>Custom Assembly</strong>
+          <span>Write and run your own code</span>
+        </button>
+      </nav>
 
       <p id="message" class="message" role="alert" hidden></p>
 
-      <section class="panel editor-panel" aria-labelledby="editor-title">
-        <div class="panel-heading">
-          <div>
-            <h3 id="editor-title">Assembly Editor</h3>
-            <span class="muted">Write a program, then Load Program and use Step or Run.</span>
-          </div>
-          <div class="editor-toolbar">
-            <select id="example-select" aria-label="Load an example program">
-              <option value="">Load an example…</option>
-            </select>
-            <button id="load-asm-btn" class="primary">Load Program</button>
-          </div>
-        </div>
-
-        <div class="editor">
-          <div class="editor-gutter" aria-hidden="true">
-            <div id="editor-lines"></div>
-          </div>
-          <div class="editor-body">
-            <div id="editor-highlight" class="editor-highlight" hidden></div>
-            <textarea
-              id="asm-source"
-              aria-label="Assembly source code"
-              spellcheck="false"
-              autocomplete="off"
-              autocapitalize="off"
-              wrap="off"
-            ></textarea>
-          </div>
-        </div>
-
-        <p id="asm-status" class="asm-status" role="status"></p>
-        <ul id="asm-errors" class="asm-errors" hidden></ul>
-
-        <details class="asm-help">
-          <summary>Assembly syntax</summary>
-          <ul>
-            <li><code>label:</code> names an address; use it in <code>JMP</code>, <code>JZ</code>, <code>JE</code>, <code>JL</code>, <code>JG</code>, <code>CALL</code>, <code>LOAD_MEM</code>, <code>STORE</code>, <code>STORE_B</code>.</li>
-            <li><code>; text</code> is a comment. Mnemonics and labels are not case-sensitive.</li>
-            <li>Numbers 0–255: <code>42</code>, <code>0x2A</code> or <code>0b101010</code>. <code>.byte 1, 2, 3</code> stores raw data.</li>
-            <li>Value operand: <code>LOAD</code>, <code>LOAD_B</code>, <code>ADD</code>, <code>SUB</code>.
-              Address operand: the jumps, <code>CALL</code>, <code>LOAD_MEM</code>, <code>STORE</code>, <code>STORE_B</code>.
-              No operand: <code>MOV_A_B</code> (A←B), <code>MOV_B_A</code> (B←A), <code>ADD_B</code>, <code>SUB_B</code>, <code>CMP</code>, <code>AND</code>, <code>OR</code>, <code>XOR</code>, <code>NOT</code>, <code>SHL</code>, <code>SHR</code>, <code>PUSH</code>, <code>POP</code>, <code>RET</code>, <code>HALT</code>.</li>
-            <li><code>JZ</code> jumps when A is 0. <code>JE</code>/<code>JL</code>/<code>JG</code> use the flags set by <code>CMP</code>.</li>
-            <li>Code and data use addresses 0x00–0xBF (192 bytes). 0xC0–0xFF is the stack.</li>
-          </ul>
-        </details>
-      </section>
-
-      <section class="section">
-        <div class="section-heading">
-          <h3>CPU Registers</h3>
-          <span class="muted">8-bit data · 16-bit address</span>
-        </div>
-        <div class="register-grid">
-          <article class="panel register-card">
-            <p>REGISTER A</p>
-            <strong id="reg-a">00</strong>
-            <span id="reg-a-dec">Decimal: 0</span>
-          </article>
-          <article class="panel register-card">
-            <p>REGISTER B</p>
-            <strong id="reg-b">00</strong>
-            <span id="reg-b-dec">Decimal: 0</span>
-          </article>
-          <article class="panel register-card">
-            <p>PROGRAM COUNTER</p>
-            <strong id="pc">0000</strong>
-            <span>Next instruction address</span>
-          </article>
-          <article class="panel register-card">
-            <p>STACK POINTER</p>
-            <strong id="sp">0100</strong>
-            <span>Stack memory boundary: C0</span>
-          </article>
-        </div>
-      </section>
-
-      <section class="workspace">
-        <article class="panel memory-panel">
-          <div class="panel-heading">
-            <h3>Memory</h3>
-            <span class="muted">256 bytes</span>
-          </div>
-          <div class="memory-legend">
-            <span><i class="legend-code"></i> Code</span>
-            <span><i class="legend-data"></i> Data</span>
-            <span><i class="legend-stack"></i> Stack</span>
-            <span><i class="legend-pc"></i> PC</span>
-          </div>
-          <div id="memory-grid" class="memory-grid"></div>
-        </article>
-
-        <div class="right-column">
-          <article class="panel flags-panel">
+      <div class="main-grid">
+        <div class="main-left">
+          <section id="builtin-panel" class="panel program-panel" role="tabpanel" aria-labelledby="mode-builtin">
             <div class="panel-heading">
-              <h3>Status Flags</h3>
+              <h3>Built-in Program</h3>
+              <span class="muted">Inputs are loaded into the program before it runs</span>
             </div>
-            <div class="flags">
-              <div><span>ZERO</span><strong id="flag-zero">0</strong></div>
-              <div><span>LESS</span><strong id="flag-less">0</strong></div>
-              <div>
-                <span>GREATER</span><strong id="flag-greater">0</strong>
+
+            <div class="program-fields">
+              <div class="field field-program">
+                <label for="program">PROGRAM</label>
+                <select id="program">
+                  <option value="comparison" data-description="Compares A with B. Result in A: 1 if A &lt; B, 2 if A &gt; B, 3 if A = B.">Comparison</option>
+                  <option value="addition" data-description="A + B, wrapping around at 256.">Addition</option>
+                  <option value="subtraction" data-description="A − B, wrapping around below 0.">Subtraction</option>
+                  <option value="and" data-description="Bitwise A AND B.">Bitwise AND</option>
+                  <option value="or" data-description="Bitwise A OR B.">Bitwise OR</option>
+                  <option value="xor" data-description="Bitwise A XOR B.">Bitwise XOR</option>
+                  <option value="not" data-description="Inverts every bit of A. Uses Input A only.">Bitwise NOT</option>
+                  <option value="shl" data-description="Shifts A one bit to the left. Uses Input A only.">Shift Left (SHL)</option>
+                  <option value="shr" data-description="Shifts A one bit to the right. Uses Input A only.">Shift Right (SHR)</option>
+                  <option value="custom">Custom (Assembly Editor)</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="input-a">INPUT A</label>
+                <input id="input-a" type="number" min="0" max="255" value="10" />
+              </div>
+              <div id="input-b-group" class="field">
+                <label for="input-b">INPUT B</label>
+                <input id="input-b" type="number" min="0" max="255" value="5" />
               </div>
             </div>
-            <div class="cpu-state">
-              <span>CPU STATUS</span>
-              <strong id="cpu-status">—</strong>
-            </div>
-            <div class="cpu-state">
-              <span>NEXT INSTRUCTION</span>
-              <strong id="cpu-next">—</strong>
-            </div>
-            <div class="cpu-state">
-              <span>RESULT</span>
-              <strong id="cpu-result">—</strong>
-            </div>
-          </article>
 
-          <article class="panel trace-panel">
+            <p id="program-description" class="program-description"></p>
+
+            <div id="builtin-actions" class="action-bar">
+              <div id="run-controls" class="control-buttons">
+                <button id="run-btn" class="primary">▶ Run</button>
+                <button id="step-btn">Step →</button>
+                <button id="reset-btn">↺ Reset</button>
+              </div>
+            </div>
+          </section>
+
+          <section id="editor-panel" class="panel editor-panel" role="tabpanel" aria-labelledby="mode-custom" hidden>
             <div class="panel-heading">
-              <h3>Instruction Trace</h3>
-              <span id="trace-count" class="muted">0 instructions</span>
+              <div>
+                <h3 id="editor-title">Assembly Editor</h3>
+                <span class="muted">Write a program, click Load Program, then Step or Run.</span>
+              </div>
+              <select id="example-select" aria-label="Load an example program">
+                <option value="">Load an example…</option>
+              </select>
             </div>
-            <div id="trace-list" class="trace-list">
-              <p class="empty-state">Instruction history will appear here.</p>
+
+            <div class="editor">
+              <div class="editor-gutter" aria-hidden="true">
+                <div id="editor-lines"></div>
+              </div>
+              <div class="editor-body">
+                <div id="editor-highlight" class="editor-highlight" hidden></div>
+                <textarea
+                  id="asm-source"
+                  aria-label="Assembly source code"
+                  spellcheck="false"
+                  autocomplete="off"
+                  autocapitalize="off"
+                  wrap="off"
+                ></textarea>
+              </div>
             </div>
-          </article>
+
+            <div id="editor-actions" class="action-bar">
+              <button id="load-asm-btn" class="load-button">Load Program</button>
+              <span class="action-divider" aria-hidden="true"></span>
+            </div>
+
+            <p id="asm-status" class="asm-status" role="status"></p>
+            <ul id="asm-errors" class="asm-errors" hidden></ul>
+
+            <details class="asm-help">
+              <summary>Assembly syntax</summary>
+              <ul>
+                <li><code>label:</code> names an address; use it in <code>JMP</code>, <code>JZ</code>, <code>JE</code>, <code>JL</code>, <code>JG</code>, <code>CALL</code>, <code>LOAD_MEM</code>, <code>STORE</code>, <code>STORE_B</code>.</li>
+                <li><code>; text</code> is a comment. Mnemonics and labels are not case-sensitive.</li>
+                <li>Numbers 0–255: <code>42</code>, <code>0x2A</code> or <code>0b101010</code>. <code>.byte 1, 2, 3</code> stores raw data.</li>
+                <li>Value operand: <code>LOAD</code>, <code>LOAD_B</code>, <code>ADD</code>, <code>SUB</code>.
+                  Address operand: the jumps, <code>CALL</code>, <code>LOAD_MEM</code>, <code>STORE</code>, <code>STORE_B</code>.
+                  No operand: <code>MOV_A_B</code> (A←B), <code>MOV_B_A</code> (B←A), <code>ADD_B</code>, <code>SUB_B</code>, <code>CMP</code>, <code>AND</code>, <code>OR</code>, <code>XOR</code>, <code>NOT</code>, <code>SHL</code>, <code>SHR</code>, <code>PUSH</code>, <code>POP</code>, <code>RET</code>, <code>HALT</code>.</li>
+                <li><code>JZ</code> jumps when A is 0. <code>JE</code>/<code>JL</code>/<code>JG</code> use the flags set by <code>CMP</code>.</li>
+                <li>Code and data use addresses 0x00–0xBF (192 bytes). 0xC0–0xFF is the stack.</li>
+              </ul>
+            </details>
+          </section>
         </div>
-      </section>
+
+        <aside class="main-right" aria-label="CPU state">
+          <section class="panel cpu-panel" aria-labelledby="cpu-title">
+            <div class="panel-heading">
+              <h3 id="cpu-title">CPU State</h3>
+              <strong id="cpu-status" class="status-pill">—</strong>
+            </div>
+
+            <div class="register-grid">
+              <article class="register-card">
+                <p>REGISTER A</p>
+                <strong id="reg-a">00</strong>
+                <span id="reg-a-dec">Decimal: 0</span>
+              </article>
+              <article class="register-card">
+                <p>REGISTER B</p>
+                <strong id="reg-b">00</strong>
+                <span id="reg-b-dec">Decimal: 0</span>
+              </article>
+              <article class="register-card">
+                <p>PROGRAM COUNTER</p>
+                <strong id="pc">0000</strong>
+                <span>Next instruction address</span>
+              </article>
+              <article class="register-card">
+                <p>STACK POINTER</p>
+                <strong id="sp">0100</strong>
+                <span>Stack region starts at C0</span>
+              </article>
+            </div>
+
+            <div class="flags" aria-label="Status flags">
+              <div><span>ZERO</span><strong id="flag-zero">0</strong></div>
+              <div><span>LESS</span><strong id="flag-less">0</strong></div>
+              <div><span>GREATER</span><strong id="flag-greater">0</strong></div>
+            </div>
+
+            <dl class="cpu-details">
+              <div class="cpu-state"><dt>LOADED PROGRAM</dt><dd id="cpu-program">—</dd></div>
+              <div class="cpu-state"><dt>STEPS EXECUTED</dt><dd id="cpu-steps">0</dd></div>
+              <div class="cpu-state"><dt>LAST INSTRUCTION</dt><dd id="cpu-last">—</dd></div>
+              <div class="cpu-state"><dt>NEXT INSTRUCTION</dt><dd id="cpu-next">—</dd></div>
+              <div class="cpu-state"><dt>RESULT</dt><dd id="cpu-result">—</dd></div>
+            </dl>
+          </section>
+
+          <section class="panel memory-panel" aria-labelledby="memory-title">
+            <div class="panel-heading">
+              <h3 id="memory-title">Memory</h3>
+              <span class="muted">256 bytes · hover a cell for details</span>
+            </div>
+            <div class="memory-legend">
+              <span><i class="legend-code"></i> Code</span>
+              <span><i class="legend-data"></i> Data</span>
+              <span><i class="legend-stack"></i> Stack</span>
+              <span><i class="legend-pc"></i> PC</span>
+            </div>
+            <div id="memory-grid" class="memory-grid"></div>
+          </section>
+        </aside>
+
+        <section class="panel trace-panel" aria-labelledby="trace-title">
+          <div class="panel-heading">
+            <h3 id="trace-title">Instruction Trace</h3>
+            <span id="trace-count" class="muted">0 instructions</span>
+          </div>
+          <div id="trace-list" class="trace-list">
+            <p class="empty-state">Instruction history will appear here.</p>
+          </div>
+        </section>
+      </div>
 
       <footer>
         <span>8-BIT CPU EMULATOR</span>

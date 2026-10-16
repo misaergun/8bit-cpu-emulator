@@ -239,6 +239,16 @@ class Page {
         stepDisabled: document.getElementById("step-btn").disabled,
         resetDisabled: document.getElementById("reset-btn").disabled,
         bDisabled: document.getElementById("input-b").disabled,
+        cpuProgram: t("cpu-program"),
+        steps: t("cpu-steps"),
+        last: t("cpu-last"),
+        statusClass: document.getElementById("cpu-status").className,
+        description: t("program-description"),
+        builtinVisible: !document.getElementById("builtin-panel").hidden,
+        editorVisible: !document.getElementById("editor-panel").hidden,
+        controlsIn: document.getElementById("run-controls").parentElement.id,
+        tabs: ["mode-builtin", "mode-custom"].map((id) =>
+          document.getElementById(id).getAttribute("aria-selected")).join(),
       };
     })()`);
   }
@@ -266,6 +276,71 @@ check(s.memory.slice(0, 5).join(" ") === "01 0A 08 05 0E", // LOAD 10, LOAD_B 5,
   "Memory shows the loaded program bytes", s.memory.slice(0, 5).join(" "));
 check(s.active === 0 && s.next === "@00 LOAD 10", "PC highlight and next instruction at 0x00");
 const initial = s;
+
+// ---------------------------------------------------------------------------
+// Modes and layout
+// ---------------------------------------------------------------------------
+
+check(s.builtinVisible && !s.editorVisible && s.controlsIn === "builtin-actions" && s.tabs === "true,false",
+  "Starts in Built-in mode with Run/Step/Reset in the program panel", JSON.stringify(s));
+check(s.description.startsWith("Compares A with B") && s.cpuProgram === "Comparison (A = 10, B = 5)" &&
+  s.steps === "0" && s.last === "—" && s.statusClass === "status-pill status-ready",
+  "Program description and CPU details reflect the loaded program", JSON.stringify(s));
+
+const rect = (selector) => page.eval(`(() => {
+  const r = document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect();
+  return { left: r.left, right: r.right, top: r.top, bottom: r.bottom };
+})()`);
+let left = await rect(".main-left");
+let right = await rect(".main-right");
+let trace = await rect(".trace-panel");
+// The trace continues the left column: same edges, one grid gap (16px) below
+// the program panel, not below the taller CPU/Memory column.
+const traceBelowLeft = (l, t) =>
+  Math.abs(t.left - l.left) < 1 && Math.abs(t.right - l.right) < 1 &&
+  t.top - l.bottom > 15 && t.top - l.bottom < 17;
+check(right.left > left.right && Math.abs(right.top - left.top) < 2 &&
+  traceBelowLeft(left, trace) && trace.top < right.bottom,
+  "Desktop: program panel left, CPU state right, trace directly below the program panel",
+  JSON.stringify({ left, right, trace }));
+
+await page.click("mode-custom");
+await page.waitFor(`document.getElementById("cpu-program").textContent.startsWith("Custom code")`);
+s = await page.snapshot();
+check(!s.builtinVisible && s.editorVisible && s.controlsIn === "editor-actions" && s.tabs === "false,true" &&
+  s.status === "READY" && s.cpuProgram === "Custom code (11 bytes)",
+  "Custom tab shows the editor, moves Run/Step/Reset below it and loads the editor code",
+  JSON.stringify(s));
+const viewport = await page.eval("window.innerHeight");
+const runControls = await rect("#run-controls");
+const cpuPanel = await rect(".cpu-panel");
+check(runControls.bottom <= viewport && cpuPanel.top < viewport && cpuPanel.left > runControls.left,
+  "Desktop: editor controls and CPU state are visible together without scrolling",
+  JSON.stringify({ runControls, cpuPanel, viewport }));
+left = await rect(".main-left");
+trace = await rect(".trace-panel");
+check(traceBelowLeft(left, trace), "Desktop: in Custom mode the trace starts right below the editor",
+  JSON.stringify({ left, trace }));
+
+await page.click("mode-builtin");
+await page.waitFor(`document.getElementById("cpu-program").textContent.startsWith("Comparison")`);
+s = await page.snapshot();
+check(s.builtinVisible && !s.editorVisible && s.controlsIn === "builtin-actions" &&
+  s.cpuProgram === "Comparison (A = 10, B = 5)" && s.status === "READY",
+  "Built-in tab returns to the last built-in program with the same inputs", JSON.stringify(s));
+
+await page.send("Emulation.setDeviceMetricsOverride",
+  { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
+await sleep(200);
+left = await rect(".main-left");
+right = await rect(".main-right");
+trace = await rect(".trace-panel");
+const overflow = await page.eval("document.documentElement.scrollWidth - window.innerWidth");
+check(right.top >= left.bottom && trace.top >= right.bottom && overflow <= 0,
+  "Narrow screen: program, then CPU state and memory, then trace, without horizontal scrolling",
+  JSON.stringify({ left, right, trace, overflow }));
+await page.send("Emulation.clearDeviceMetricsOverride");
+await sleep(200);
 
 // Step
 await page.click("step-btn");
@@ -328,6 +403,41 @@ for (const [program, a, b, expected] of PROGRAMS) {
     `UI runs ${program}(${a}${b === null ? "" : `, ${b}`}) -> ${expected}`, s.result);
 }
 
+// All nine programs with Step only, then Reset
+const STEP_PROGRAMS = [
+  // [program, a, b, expected A, instructions executed including HALT]
+  ["comparison", 200, 13, 2, 7], ["addition", 77, 23, 100, 4],
+  ["subtraction", 3, 9, 250, 4], ["and", 0xF0, 0x3C, 0x30, 4],
+  ["or", 0xF0, 0x0F, 0xFF, 4], ["xor", 0xFF, 0x0F, 0xF0, 4],
+  ["not", 0, null, 255, 3], ["shl", 0x40, null, 0x80, 3], ["shr", 1, null, 0, 3],
+];
+for (const [program, a, b, expectedA, steps] of STEP_PROGRAMS) {
+  await page.set("program", program, "change");
+  await page.waitFor(statusIs("READY"));
+  await page.set("input-a", String(a), "input");
+  if (b !== null) await page.set("input-b", String(b), "input");
+  await page.click("step-btn");
+  await page.waitFor(`document.getElementById("cpu-steps").textContent === "1"`);
+  const first = await page.snapshot();
+  for (let i = 1; i < 50 && (await page.snapshot()).status !== "HALTED"; i++) {
+    await page.click("step-btn");
+    await page.waitFor(`document.getElementById("cpu-steps").textContent === "${i + 1}"`);
+  }
+  s = await page.snapshot();
+  const inputs = b === null ? `A = ${a}` : `A = ${a}, B = ${b}`;
+  check(first.status === "RUNNING" && first.trace.length === 1 &&
+    first.regA === a.toString(16).toUpperCase().padStart(2, "0") &&
+    s.status === "HALTED" && parseInt(s.regA, 16) === expectedA && s.steps === String(steps) &&
+    s.last.endsWith("HALT") && s.cpuProgram.endsWith(`(${inputs})`),
+    `Step through ${program}(${a}${b === null ? "" : `, ${b}`}) -> A = ${expectedA} in ${steps} steps`,
+    JSON.stringify({ regA: s.regA, steps: s.steps, last: s.last, program: s.cpuProgram }));
+  await page.click("reset-btn");
+  await page.waitFor(statusIs("READY"));
+  s = await page.snapshot();
+  check(s.steps === "0" && s.trace.length === 0 && s.regA === "00" && s.pc === "0000" && s.last === "—",
+    `Reset after ${program} returns to READY with 0 steps`);
+}
+
 // Invalid input
 await page.set("program", "addition", "change");
 await page.waitFor(statusIs("READY"));
@@ -353,8 +463,8 @@ const EXAMPLES = await page.eval("ASM_EXAMPLES.map((e) => ({ id: e.id, expectedA
 let e = await page.editor();
 check(e.examples.join() === ["", ...EXAMPLES.map((x) => x.id)].join() && EXAMPLES.length === 4,
   "Example menu lists the 4 examples");
-check(e.source.startsWith("; Count down") && e.status.startsWith("Not loaded yet"),
-  "Editor starts with the first example, not yet loaded", e.status);
+check(e.source.startsWith("; Count down") && e.status.startsWith("The CPU is running the built-in program"),
+  "Editor keeps its code and says a built-in program is loaded", e.status);
 
 const loadAsm = async () => {
   const before = await page.eval(`document.getElementById("cpu-status").textContent`);
@@ -411,6 +521,12 @@ check(s.regA === "00" && s.memory[0xB0] === "01" && s.traceCount === "21 instruc
   s.flags === "100" && e.highlight?.kind === "halted" && e.highlight.line === 9,
   "Run finishes the loop: 21 instructions, A = 0, Zero flag set, HALT line highlighted",
   JSON.stringify({ regA: s.regA, b0: s.memory[0xB0], count: s.traceCount, h: e.highlight }));
+left = await rect(".main-left");
+trace = await rect(".trace-panel");
+const traceList = await rect("#trace-list");
+check(traceBelowLeft(left, trace) && traceList.bottom - traceList.top <= 341,
+  "Desktop: with 21 trace entries the trace stays below the editor and scrolls inside its panel",
+  JSON.stringify({ left, trace, traceList }));
 
 await page.click("reset-btn");
 await page.waitFor(statusIs("READY"));
@@ -450,11 +566,19 @@ check(e.selection === "LOAD 5\n".length, "Clicking an error selects that line in
 
 await page.set("program", "addition", "change");
 await page.waitFor(statusIs("READY"));
-await loadAsm();
+await page.click("mode-custom"); // tries to load the invalid editor code
+await page.waitFor(`document.getElementById("asm-errors").children.length > 0`);
 e = await page.editor();
 s = await page.snapshot();
-check(e.program === "addition" && s.status === "READY" && s.next === "@00 LOAD 250",
-  "Failed assembly while a built-in is loaded keeps the built-in program", JSON.stringify(s.next));
+check(e.program === "custom" && s.editorVisible && s.status === "READY" && s.next === "@00 LOAD 250" &&
+  s.cpuProgram.startsWith("Addition (A = 250"),
+  "Failed assembly from the Custom tab stays in the editor and keeps the built-in program loaded",
+  JSON.stringify({ program: e.program, next: s.next, cpu: s.cpuProgram }));
+await page.click("run-btn");
+await sleep(150);
+s = await page.snapshot();
+check(s.status === "READY" && s.steps === "0" && (await page.editor()).errors.length === 2,
+  "Run with invalid code shows the errors instead of running the built-in program");
 check(e.status.startsWith("Assembly failed with 2 errors"), "Status explains the failure", e.status);
 
 for (const [source, expected, label] of [
@@ -468,7 +592,8 @@ for (const [source, expected, label] of [
   await page.type(source);
   await loadAsm();
   e = await page.editor();
-  check(e.errors.some((x) => x.includes(expected)) && e.program === "addition",
+  check(e.errors.some((x) => x.includes(expected)) &&
+    (await page.snapshot()).cpuProgram.startsWith("Addition"),
     `Rejected in the editor: ${label}`, JSON.stringify(e.errors));
 }
 

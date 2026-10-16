@@ -228,14 +228,30 @@ You can then run another program (`y`), which resets the CPU first, or exit (`n`
 
 ## Assembly Editor
 
-The web dashboard has an **Assembly Editor** for writing your own programs. They run on the same C++ CPU (compiled to WebAssembly) as the built-in programs.
+The web dashboard has two modes, chosen with the tabs at the top:
 
-1. Write code in the editor, or pick one under **Load an example…**.
-2. Click **Load Program**. The C++ assembler (`src/assembler.h`) turns the code into machine code. The CPU is then reset and the bytes are loaded into memory from address `0x00`. The program menu switches to **Custom (Assembly Editor)**.
+- **Built-in Programs**: choose one of the nine programs, enter Input A (and Input B when the program uses it), and use Run, Step, or Reset.
+- **Custom Assembly**: the **Assembly Editor**, for writing your own programs. Choosing **Custom (Assembly Editor)** in the program menu opens the same mode. Your programs run on the same C++ CPU (compiled to WebAssembly) as the built-in programs.
+
+In both modes, the **CPU State** panel on the right shows:
+
+- the registers and flags;
+- the status (`READY`, `RUNNING`, `HALTED`, or `ERROR`);
+- the loaded program;
+- the number of executed instructions;
+- the last and next instruction;
+- the result.
+
+The memory viewer is below it. The instruction trace is directly below the program panel or editor. On narrow screens, the sections are stacked in this order: program, CPU State and memory, then the trace.
+
+To use the editor:
+
+1. Open the **Custom Assembly** tab. The code in the editor is loaded straight away. Write your own code, or pick one under **Load an example…**.
+2. Click **Load Program** (below the editor, next to Run, Step, and Reset). The C++ assembler (`src/assembler.h`) turns the code into machine code. The CPU is then reset and the bytes are loaded into memory from address `0x00`.
 3. Use **Step** or **Run**. The registers, flags, memory, and trace update as with the built-in programs. The editor highlights the line of the next instruction (green), the last instruction after `HALT` (amber), or the instruction that caused a CPU error (red).
 4. **Reset** restarts your program from the beginning with its original memory.
 
-If assembly fails, the errors are listed below the editor with their line numbers, and the line numbers are marked red. Click an error to jump to its line. The program that was loaded before stays loaded, and nothing in the CPU changes. If you edit the code after loading it, the editor tells you to click **Load Program** again.
+If assembly fails, the errors are listed below the editor with their line numbers, and the line numbers are marked red. Click an error to jump to its line. The program that was loaded before stays loaded, and nothing in the CPU changes. **Loaded program** in the CPU State panel shows which program that is. Run and Step do not run it while the editor has errors; they show the errors again. If you edit the code after loading it, the editor tells you to click **Load Program** again.
 
 ### Syntax
 
