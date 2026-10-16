@@ -4,6 +4,22 @@ A small 8-bit CPU emulator written in C++17. It simulates a CPU with two general
 
 This is a learning project about CPU architecture, the fetch–decode–execute cycle, and testing low-level code.
 
+## Live Demo
+
+**[8bit-cpu-emulator.vercel.app](https://8bit-cpu-emulator.vercel.app)**
+
+The demo runs entirely in your browser. The C++ CPU is compiled to WebAssembly, so no server or installation is needed.
+
+## Screenshots
+
+### CPU Workspace and Assembly Editor
+
+![CPU Workspace and Assembly Editor](screenshots/emulator-main.png)
+
+### Instruction Trace and Memory
+
+![Instruction Trace and Memory](screenshots/emulator-trace-memory.png)
+
 ## Features
 
 - **28 instructions** covering data movement, arithmetic, bitwise logic, shifts, comparisons, conditional and unconditional jumps, stack operations, and subroutine calls
@@ -94,6 +110,7 @@ Opcode values are defined as constants in the `CPU` class in [`src/cpu.h`](src/c
 │   ├── build_wasm.sh           # Builds web/generated/ with Emscripten
 │   ├── run_all_tests.sh        # Builds everything and runs all tests
 │   └── run_test.py             # Runs build/cpu_emulator with piped input and a 3-second timeout
+├── screenshots/                # Images used in this README
 └── build/                      # Compiled programs (created by the build, not tracked by Git)
 ```
 
