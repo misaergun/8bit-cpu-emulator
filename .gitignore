@@ -2,6 +2,8 @@
 # Compiled binaries
 cpu_emulator
 test_cpu
+web_server
+test_web_session
 
 # macOS
 .DS_Store

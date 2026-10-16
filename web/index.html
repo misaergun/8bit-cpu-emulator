@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>8-Bit CPU Emulator</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-icon">8</span>
+        <div>
+          <h1>8-Bit CPU Emulator</h1>
+          <p>CPU ARCHITECTURE LAB</p>
+        </div>
+      </div>
+      <div id="server-status" class="server-status">
+        <span class="status-dot"></span>
+        <span id="server-status-text">LOCAL SERVER</span>
+      </div>
+    </header>
+
+    <main>
+      <section class="page-heading">
+        <div>
+          <p class="eyebrow">EMULATOR / DASHBOARD</p>
+          <h2>Processor Overview</h2>
+          <p class="subtitle">
+            Explore registers, memory and instruction execution.
+          </p>
+        </div>
+        <div class="architecture-tag">8-BIT · 256 BYTE MEMORY</div>
+      </section>
+
+      <section class="controls panel">
+        <div>
+          <label for="program">PROGRAM</label>
+          <select id="program">
+            <option value="comparison">Comparison</option>
+            <option value="addition">Addition</option>
+            <option value="subtraction">Subtraction</option>
+            <option value="and">Bitwise AND</option>
+            <option value="or">Bitwise OR</option>
+            <option value="xor">Bitwise XOR</option>
+            <option value="not">Bitwise NOT</option>
+            <option value="shl">Shift Left (SHL)</option>
+            <option value="shr">Shift Right (SHR)</option>
+          </select>
+        </div>
+        <div>
+          <label for="input-a">INPUT A</label>
+          <input id="input-a" type="number" min="0" max="255" value="10" />
+        </div>
+        <div id="input-b-group">
+          <label for="input-b">INPUT B</label>
+          <input id="input-b" type="number" min="0" max="255" value="5" />
+        </div>
+        <div class="control-buttons">
+          <button id="run-btn" class="primary">▶ Run</button>
+          <button id="step-btn">Step →</button>
+          <button id="reset-btn">↺ Reset</button>
+        </div>
+      </section>
+
+      <p id="message" class="message" role="alert" hidden></p>
+
+      <section class="section">
+        <div class="section-heading">
+          <h3>CPU Registers</h3>
+          <span class="muted">8-bit data · 16-bit address</span>
+        </div>
+        <div class="register-grid">
+          <article class="panel register-card">
+            <p>REGISTER A</p>
+            <strong id="reg-a">00</strong>
+            <span id="reg-a-dec">Decimal: 0</span>
+          </article>
+          <article class="panel register-card">
+            <p>REGISTER B</p>
+            <strong id="reg-b">00</strong>
+            <span id="reg-b-dec">Decimal: 0</span>
+          </article>
+          <article class="panel register-card">
+            <p>PROGRAM COUNTER</p>
+            <strong id="pc">0000</strong>
+            <span>Next instruction address</span>
+          </article>
+          <article class="panel register-card">
+            <p>STACK POINTER</p>
+            <strong id="sp">0100</strong>
+            <span>Stack memory boundary: C0</span>
+          </article>
+        </div>
+      </section>
+
+      <section class="workspace">
+        <article class="panel memory-panel">
+          <div class="panel-heading">
+            <h3>Memory</h3>
+            <span class="muted">256 bytes</span>
+          </div>
+          <div class="memory-legend">
+            <span><i class="legend-code"></i> Code</span>
+            <span><i class="legend-data"></i> Data</span>
+            <span><i class="legend-stack"></i> Stack</span>
+            <span><i class="legend-pc"></i> PC</span>
+          </div>
+          <div id="memory-grid" class="memory-grid"></div>
+        </article>
+
+        <div class="right-column">
+          <article class="panel flags-panel">
+            <div class="panel-heading">
+              <h3>Status Flags</h3>
+            </div>
+            <div class="flags">
+              <div><span>ZERO</span><strong id="flag-zero">0</strong></div>
+              <div><span>LESS</span><strong id="flag-less">0</strong></div>
+              <div>
+                <span>GREATER</span><strong id="flag-greater">0</strong>
+              </div>
+            </div>
+            <div class="cpu-state">
+              <span>CPU STATUS</span>
+              <strong id="cpu-status">—</strong>
+            </div>
+            <div class="cpu-state">
+              <span>NEXT INSTRUCTION</span>
+              <strong id="cpu-next">—</strong>
+            </div>
+            <div class="cpu-state">
+              <span>RESULT</span>
+              <strong id="cpu-result">—</strong>
+            </div>
+          </article>
+
+          <article class="panel trace-panel">
+            <div class="panel-heading">
+              <h3>Instruction Trace</h3>
+              <span id="trace-count" class="muted">0 instructions</span>
+            </div>
+            <div id="trace-list" class="trace-list">
+              <p class="empty-state">Instruction history will appear here.</p>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <footer>
+        <span>8-BIT CPU EMULATOR</span>
+        <span>C++ CORE · LOCAL EXECUTION</span>
+      </footer>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
