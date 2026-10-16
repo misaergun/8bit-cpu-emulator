@@ -1,10 +1,9 @@
-// Unit tests for the web server's CPU session logic.
-// Build (from the project root):
+// Unit tests for the CPU session used by the web server and the WebAssembly
+// build. Build (from the project root):
 // clang++ -std=c++17 -Wall -Wextra tests/test_web_session.cpp -o build/test_web_session
+// The same file is also built with em++ and run in Node by run_all_tests.sh.
 
-#define main web_server_main
-#include "../src/web_server.cpp"
-#undef main
+#include "../src/emulator_session.h"
 
 #include <iostream>
 #include <sstream>

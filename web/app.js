@@ -38,7 +38,9 @@
   };
 
   let programs = new Map(); // id -> { id, name, needs_b }
-  let state = null; // last state received from the server
+  let cpu = null; // WebAssembly module from generated/cpu.js
+  let cpuLog = ""; // last diagnostic printed by the WebAssembly runtime
+  let state = null; // last state reported by the CPU
   let busy = false; // a Run/Step/Reset action is in progress
   let pendingLoad = null; // promise of an in-flight program load
   let inputTimer = null;
@@ -68,46 +70,64 @@
     el.message.hidden = true;
   }
 
-  function setServerOnline(online) {
-    el.serverStatus.classList.toggle("offline", !online);
-    el.serverStatusText.textContent = online ? "LOCAL SERVER" : "SERVER OFFLINE";
+  function setEngineStatus(text, ok) {
+    el.serverStatus.classList.toggle("offline", !ok);
+    el.serverStatusText.textContent = text;
   }
 
-  async function api(method, path, body) {
-    const options = { method, headers: {} };
-    if (body !== undefined) {
-      options.headers["Content-Type"] = "application/json";
-      options.body = JSON.stringify(body);
-    }
+  // ------------------------------------------------------------------
+  // WebAssembly CPU
+  // ------------------------------------------------------------------
 
-    let response;
+  // Calls a cpu_* function from src/wasm_api.cpp. Each one returns a JSON
+  // string: {"ok":true,"state":{...}} or {"ok":false,"error":"...","state":{...}}.
+  function callCpu(name, argTypes = [], args = []) {
+    if (!cpu) throw new ApiError("The WebAssembly CPU is not loaded.");
+
+    let data;
     try {
-      response = await fetch(path, options);
-    } catch (networkError) {
-      setServerOnline(false);
-      throw new ApiError(
-        "Cannot reach the local server. Is ./web_server still running?"
-      );
-    }
-    setServerOnline(true);
-
-    let data = null;
-    const type = response.headers.get("Content-Type") || "";
-    if (type.includes("application/json")) {
-      try {
-        data = await response.json();
-      } catch (parseError) {
-        data = null;
-      }
+      const pointer = cpu.ccall(name, "number", argTypes, args);
+      data = JSON.parse(cpu.UTF8ToString(pointer));
+    } catch (error) {
+      throw new ApiError(`WebAssembly CPU failed in ${name}: ${error.message}`);
     }
 
-    if (!data) {
-      throw new ApiError(`Unexpected response from server (HTTP ${response.status}).`);
-    }
-    if (!response.ok || data.ok !== true) {
-      throw new ApiError(data.error || `Request failed (HTTP ${response.status}).`, data.state);
+    if (!data || data.ok !== true) {
+      throw new ApiError((data && data.error) || `${name} failed.`, data && data.state);
     }
     return data;
+  }
+
+  const cpuApi = {
+    programs: () => callCpu("cpu_programs"),
+    state: () => callCpu("cpu_state"),
+    // b is NaN for programs that only use input A.
+    load: ({ program, a, b }) =>
+      callCpu("cpu_load", ["string", "number", "number"],
+        [program, a, b === undefined ? NaN : b]),
+    step: () => callCpu("cpu_step"),
+    run: () => callCpu("cpu_run"),
+    reset: () => callCpu("cpu_reset"),
+  };
+
+  async function loadCpuModule() {
+    if (typeof WebAssembly !== "object") {
+      throw new ApiError("This browser does not support WebAssembly.");
+    }
+    if (typeof createCpuModule !== "function") {
+      throw new ApiError(
+        "Could not load generated/cpu.js. Build it with ./scripts/build_wasm.sh."
+      );
+    }
+    try {
+      return await createCpuModule({
+        print: (text) => { cpuLog = text; },
+        printErr: (text) => { cpuLog = text; },
+      });
+    } catch (error) {
+      const detail = cpuLog || (error && error.message) || String(error);
+      throw new ApiError(`Could not start the WebAssembly CPU (generated/cpu.wasm): ${detail}`);
+    }
   }
 
   // ------------------------------------------------------------------
@@ -346,7 +366,8 @@
       return Promise.resolve(false);
     }
 
-    const promise = api("POST", "/api/program", controls.request)
+    const promise = Promise.resolve()
+      .then(() => cpuApi.load(controls.request))
       .then((data) => {
         clearMessage();
         render(data.state);
@@ -366,7 +387,7 @@
     return promise;
   }
 
-  // Makes sure the server runs the program shown in the controls.
+  // Makes sure the CPU runs the program shown in the controls.
   async function ensureLoaded() {
     if (pendingLoad) await pendingLoad;
     const controls = readControls();
@@ -397,7 +418,7 @@
   function onStep() {
     runAction(async () => {
       if (!(await ensureLoaded())) return;
-      const data = await api("POST", "/api/step");
+      const data = cpuApi.step();
       clearMessage();
       render(data.state);
     });
@@ -406,7 +427,7 @@
   function onRun() {
     runAction(async () => {
       if (!(await ensureLoaded())) return;
-      const data = await api("POST", "/api/run");
+      const data = cpuApi.run();
       clearMessage();
       render(data.state);
     });
@@ -415,7 +436,7 @@
   function onReset() {
     runAction(async () => {
       if (pendingLoad) await pendingLoad;
-      const data = await api("POST", "/api/reset");
+      const data = cpuApi.reset();
       clearMessage();
       render(data.state);
     });
@@ -452,25 +473,16 @@
     updateButtons();
 
     try {
-      const list = await api("GET", "/api/programs");
-      programs = new Map(list.programs.map((p) => [p.id, p]));
+      cpu = await loadCpuModule();
+      setEngineStatus("WASM CPU", true);
 
-      const current = await api("GET", "/api/state");
-      const loaded = current.state.program;
-      if (loaded && programs.has(loaded.id)) {
-        // Continue the session that is already running on the server.
-        el.program.value = loaded.id;
-        el.inputA.value = String(loaded.a);
-        if (loaded.needs_b) el.inputB.value = String(loaded.b);
-        updateInputB();
-        render(current.state);
-      } else {
-        updateInputB();
-        render(current.state);
-        busy = false;
-        await loadProgram();
-      }
+      programs = new Map(cpuApi.programs().programs.map((p) => [p.id, p]));
+      updateInputB();
+      render(cpuApi.state().state);
+      busy = false;
+      await loadProgram();
     } catch (error) {
+      setEngineStatus("WASM UNAVAILABLE", false);
       showMessage(error.message);
     } finally {
       busy = false;

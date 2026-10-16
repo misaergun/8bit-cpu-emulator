@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>8-Bit CPU Emulator</title>
     <link rel="icon" href="data:," />
-    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <header class="topbar">
@@ -18,7 +18,7 @@
       </div>
       <div id="server-status" class="server-status">
         <span class="status-dot"></span>
-        <span id="server-status-text">LOCAL SERVER</span>
+        <span id="server-status-text">LOADING WASM</span>
       </div>
     </header>
 
@@ -154,6 +154,7 @@
       </footer>
     </main>
 
-    <script src="/app.js"></script>
+    <script src="generated/cpu.js"></script>
+    <script src="app.js"></script>
   </body>
 </html>

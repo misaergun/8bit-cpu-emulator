@@ -1,6 +1,12 @@
 
-# Compiled binaries
+# Compiled binaries and test output
 build/
+
+# The WebAssembly build in web/generated/ is committed on purpose:
+# Vercel cannot run Emscripten, so it deploys these prebuilt files.
+
+# Vercel CLI project link (created by `vercel link` / `vercel deploy`)
+.vercel/
 
 # macOS
 .DS_Store

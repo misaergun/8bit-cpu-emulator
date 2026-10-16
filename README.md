@@ -1,6 +1,6 @@
 # 8-Bit CPU Emulator
 
-A small 8-bit CPU emulator written in C++17. It simulates a CPU with two general-purpose registers, comparison flags, 256 bytes of memory, a hardware-style stack, and subroutine calls. You can run it from the command line or in the browser through a local web interface: pick a built-in program, enter its inputs, and watch it execute one instruction at a time or all at once.
+A small 8-bit CPU emulator written in C++17. It simulates a CPU with two general-purpose registers, comparison flags, 256 bytes of memory, a hardware-style stack, and subroutine calls. You can run it from the command line or in the browser, where the same C++ CPU runs as WebAssembly: pick a built-in program, enter its inputs, and watch it execute one instruction at a time or all at once.
 
 This is a learning project about CPU architecture, the fetch–decode–execute cycle, and testing low-level code.
 
@@ -15,7 +15,7 @@ This is a learning project about CPU architecture, the fetch–decode–execute 
 - **CPU state output** after every instruction: registers, program counter, flags, and halt status
 - **Memory inspection**: read a single address, or dump a range of addresses in hex and decimal
 - **Input validation** for every prompt, with clean exit on end of input (EOF)
-- **Local web interface**: a dashboard served by a small C++ HTTP server that shows registers, flags, all 256 bytes of memory, and an instruction trace from the real CPU
+- **Browser dashboard**: the C++ CPU compiled to WebAssembly, showing registers, flags, all 256 bytes of memory, and an instruction trace. It is a static site with no backend, so it can be deployed to Vercel
 - **Unit and integration tests**, plus one script that builds and runs them all
 
 ## Instruction Set
@@ -61,25 +61,34 @@ Opcode values are defined as constants in the `CPU` class in [`src/cpu.h`](src/c
 8bit-cpu-emulator/
 ├── .gitignore
 ├── README.md
+├── vercel.json                 # Vercel static deployment settings (serves web/)
 ├── run_all_tests.sh            # Entry point: runs scripts/run_all_tests.sh
 ├── src/
 │   ├── cpu.h                   # CPU class: registers, flags, memory, stack, instruction execution
 │   ├── program_loader.h        # load_program(): copies a program into memory
 │   ├── instruction_names.h     # Maps opcodes to mnemonics for the execution trace
-│   ├── programs.h              # The nine built-in programs, used by the web server
+│   ├── programs.h              # The nine built-in programs used by the web interface
+│   ├── emulator_session.h      # CPU session with trace and JSON state, shared by WASM and the server
+│   ├── wasm_api.cpp            # C interface compiled to WebAssembly for the browser
 │   ├── main.cpp                # Interactive emulator: program menu, execution modes, memory inspection
-│   └── web_server.cpp          # Local HTTP server and JSON API for the web interface
-├── web/
+│   └── web_server.cpp          # Optional local HTTP server and JSON API (not needed by the browser app)
+├── web/                        # Static site root (deployed to Vercel)
 │   ├── index.html              # Dashboard layout
 │   ├── style.css               # Dashboard styles
-│   └── app.js                  # Connects the dashboard to the API
+│   ├── app.js                  # Connects the dashboard to the WebAssembly CPU
+│   └── generated/              # Built by scripts/build_wasm.sh and committed
+│       ├── cpu.js              # Emscripten loader (defines createCpuModule)
+│       └── cpu.wasm            # The C++ CPU compiled to WebAssembly
 ├── tests/
 │   ├── test_cpu.cpp            # Unit tests for the CPU, loader, and instruction names
 │   ├── test_main.sh            # Integration tests for the interactive emulator
-│   ├── test_web_session.cpp    # Unit tests for the web server's CPU session
-│   └── test_web_server.py      # HTTP integration tests for the web server
+│   ├── test_web_session.cpp    # Unit tests for the CPU session (native and WebAssembly)
+│   ├── test_web_server.py      # HTTP integration tests for the web server
+│   ├── test_wasm.mjs           # Tests the WebAssembly interface in Node
+│   └── test_frontend.mjs       # Drives the static site in headless Chrome
 ├── scripts/
-│   ├── run_all_tests.sh        # Builds everything into build/ and runs all tests
+│   ├── build_wasm.sh           # Builds web/generated/ with Emscripten
+│   ├── run_all_tests.sh        # Builds everything and runs all tests
 │   └── run_test.py             # Runs build/cpu_emulator with piped input and a 3-second timeout
 └── build/                      # Compiled programs (created by the build, not tracked by Git)
 ```
@@ -89,8 +98,10 @@ Opcode values are defined as constants in the `CPU` class in [`src/cpu.h`](src/c
 - A C++17 compiler. The build scripts use `clang++`; `g++` with `-std=c++17` should also work.
 - Bash, to run the test scripts.
 - Python 3, used by the integration tests to run the emulator with a timeout.
+- [Emscripten](https://emscripten.org), only to rebuild the WebAssembly module. On macOS: `brew install emscripten`, then check with `emcc --version`.
+- Node.js and Google Chrome, for the WebAssembly and browser tests.
 
-The project uses only the C++ standard library. It has no external dependencies and no build system.
+The C++ code uses only the standard library. There is no build system and there are no npm packages.
 
 ## Build and Run
 
@@ -104,15 +115,37 @@ clang++ -std=c++17 src/main.cpp -o build/cpu_emulator
 ./build/cpu_emulator
 ```
 
-### Web interface
+### Web interface (WebAssembly)
+
+The browser app runs the C++ CPU as WebAssembly, so it only needs a static file server. Build the module (only needed after changing C++ code, because `web/generated/` is committed):
 
 ```bash
-mkdir -p build
-clang++ -std=c++17 -Wall -Wextra src/web_server.cpp -o build/web_server
-./build/web_server
+./scripts/build_wasm.sh
 ```
 
-Then open <http://127.0.0.1:8080>. Use `--port PORT` to choose another port. The server only listens on `127.0.0.1` and serves the files in `web/`; it finds them whether you start it from the project root or from `build/`.
+Serve `web/` and open <http://127.0.0.1:8080>:
+
+```bash
+python3 -m http.server 8080 --bind 127.0.0.1 --directory web
+```
+
+Opening `web/index.html` directly as a file does not work, because browsers do not load WebAssembly from `file://` URLs.
+
+The C++ server also serves the same site: `clang++ -std=c++17 -Wall -Wextra src/web_server.cpp -o build/web_server && ./build/web_server`. It still provides the JSON API under `/api/`, but the browser app no longer uses it.
+
+### How the browser talks to the CPU
+
+`web/app.js` loads `generated/cpu.js`, which loads `cpu.wasm`. It calls the functions in `src/wasm_api.cpp` with `ccall`: `cpu_programs`, `cpu_state`, `cpu_load(program, a, b)`, `cpu_step`, `cpu_run`, `cpu_reset`, and `cpu_memory_byte(address)`. Each returns JSON in the same format as the HTTP API, `{"ok":true,"state":{...}}` or `{"ok":false,"error":"..."}`. The state includes registers, flags, all 256 memory bytes, the next instruction, and the trace. Instruction execution happens only in C++ (`src/cpu.h`); JavaScript only displays the state.
+
+### Deploy to Vercel
+
+`vercel.json` tells Vercel to publish `web/` as a static site. Vercel cannot run Emscripten, so it deploys the committed files in `web/generated/`. The build command only checks that they exist.
+
+1. Rebuild and test: `./run_all_tests.sh`, which also rebuilds `web/generated/`.
+2. Commit, including `web/generated/cpu.js`, `web/generated/cpu.wasm`, and `vercel.json`, and push to GitHub.
+3. In Vercel, choose **Add New → Project**, import the repository, and keep the settings from `vercel.json` (Framework Preset: Other, Output Directory: `web`). Click **Deploy**.
+
+Without GitHub, deploy from the project root with the Vercel CLI: `npx vercel` for a preview, then `npx vercel --prod`.
 
 ## Usage
 
@@ -204,7 +237,10 @@ This script:
 3. Runs the integration tests in `tests/test_main.sh`
 4. Builds `build/web_server` from `src/web_server.cpp`
 5. Builds and runs the web session unit tests in `tests/test_web_session.cpp`
-6. Runs the web server integration tests in `tests/test_web_server.py`
+6. Rebuilds `web/generated/` and runs `tests/test_cpu.cpp` and `tests/test_web_session.cpp` compiled to WebAssembly in Node. Without Emscripten, it prints `SKIPPED` for these steps and tests the committed module instead
+7. Runs the web server integration tests in `tests/test_web_server.py`
+8. Runs the WebAssembly interface tests in `tests/test_wasm.mjs`
+9. Runs the browser tests in `tests/test_frontend.mjs`
 
 It can be called from any directory.
 
@@ -250,7 +286,9 @@ clang++ -std=c++17 src/main.cpp -o build/cpu_emulator
 
 ### Web tests
 
-- [`tests/test_web_session.cpp`](tests/test_web_session.cpp) tests the server's CPU session directly: the 1,000-instruction limit for runaway programs, CPU faults, reset, and comparison results.
+- [`tests/test_web_session.cpp`](tests/test_web_session.cpp) tests the CPU session directly: the 1,000-instruction limit for runaway programs, CPU faults, reset, and comparison results.
+- [`tests/test_wasm.mjs`](tests/test_wasm.mjs) loads `web/generated/cpu.js` in Node. It checks that all nine programs give the same result as `build/cpu_emulator`, that Step runs one instruction, that Run stops at `HALT`, that Reset restores registers and memory, that all 256 memory bytes are readable, and that invalid inputs are rejected.
+- [`tests/test_frontend.mjs`](tests/test_frontend.mjs) serves `web/` with a plain static server and clicks through the dashboard in headless Chrome. It checks Run, Step, Reset, program changes, input errors, and all nine programs. It also fails on any console error, failed request, or request to `/api/`, and checks the error shown when `cpu.js` or `cpu.wasm` is missing.
 - [`tests/test_web_server.py`](tests/test_web_server.py) builds and starts `build/web_server` on port 18080 and tests the API over HTTP. It checks that all nine programs give the same result as `build/cpu_emulator`, and covers step and trace data, input validation, malformed requests, local-only access, and missing web files.
 
 ```bash
@@ -259,6 +297,8 @@ clang++ -std=c++17 src/main.cpp -o build/cpu_emulator
 clang++ -std=c++17 -Wall -Wextra tests/test_web_session.cpp -o build/test_web_session
 ./build/test_web_session
 python3 tests/test_web_server.py
+node tests/test_wasm.mjs
+node tests/test_frontend.mjs
 ```
 
 ## Technical Details

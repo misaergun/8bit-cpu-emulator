@@ -285,6 +285,17 @@ def test_security_and_robustness():
         status, text, headers = request("GET", path)
         check(status == 200 and headers["Content-Type"].startswith(ctype)
               and len(text) > 0, f"Static file {path} served")
+    status, text, headers = request("GET", "/generated/cpu.js")
+    check(status == 200 and headers["Content-Type"].startswith(
+        "application/javascript") and "createCpuModule" in text,
+          "Generated WASM loader /generated/cpu.js served")
+    with urllib.request.urlopen(BASE + "/generated/cpu.wasm", timeout=5) as resp:
+        wasm = resp.read()
+        check(resp.status == 200 and
+              resp.headers["Content-Type"] == "application/wasm" and
+              wasm[:4] == b"\0asm",
+              "Generated /generated/cpu.wasm served as application/wasm")
+
     status, _, _ = request("GET", "/../cpu.h")
     check(status == 404, "Paths outside the whitelist -> 404")
 

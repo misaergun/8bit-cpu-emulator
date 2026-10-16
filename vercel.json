@@ -1,0 +1,6 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "buildCommand": "test -f web/generated/cpu.js && test -f web/generated/cpu.wasm || { echo 'web/generated is missing: run ./scripts/build_wasm.sh and commit web/generated'; exit 1; }",
+  "outputDirectory": "web"
+}
